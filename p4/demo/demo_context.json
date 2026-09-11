@@ -1,0 +1,80 @@
+{
+  "facility_id": "0a1b2c3d-0002-4002-8002-000000000002",
+  "reporting_period_id": "0a1b2c3d-0003-4003-8003-000000000003",
+  "process_resources": [
+    {
+      "process_name": "Dyeing",
+      "electricity_kwh_per_year": 210000.0,
+      "natural_gas_m3_per_year": null,
+      "diesel_litres_per_year": null,
+      "water_m3_per_year": 16000.0,
+      "wastewater_m3_per_year": 14000.0,
+      "waste_kg_per_year": null,
+      "packaging_kg_per_year": null
+    },
+    {
+      "process_name": "Drying",
+      "electricity_kwh_per_year": 150000.0,
+      "natural_gas_m3_per_year": null,
+      "diesel_litres_per_year": null,
+      "water_m3_per_year": null,
+      "wastewater_m3_per_year": null,
+      "waste_kg_per_year": null,
+      "packaging_kg_per_year": null
+    },
+    {
+      "process_name": "Boiler",
+      "electricity_kwh_per_year": null,
+      "natural_gas_m3_per_year": 95000.0,
+      "diesel_litres_per_year": 12000.0,
+      "water_m3_per_year": 2500.0,
+      "wastewater_m3_per_year": null,
+      "waste_kg_per_year": null,
+      "packaging_kg_per_year": null
+    },
+    {
+      "process_name": "Finishing",
+      "electricity_kwh_per_year": 80000.0,
+      "natural_gas_m3_per_year": null,
+      "diesel_litres_per_year": null,
+      "water_m3_per_year": null,
+      "wastewater_m3_per_year": null,
+      "waste_kg_per_year": 80000.0,
+      "packaging_kg_per_year": null
+    },
+    {
+      "process_name": "Packaging",
+      "electricity_kwh_per_year": 40000.0,
+      "natural_gas_m3_per_year": null,
+      "diesel_litres_per_year": null,
+      "water_m3_per_year": null,
+      "wastewater_m3_per_year": null,
+      "waste_kg_per_year": null,
+      "packaging_kg_per_year": 21000.0
+    },
+    {
+      "process_name": "Transportation",
+      "electricity_kwh_per_year": null,
+      "natural_gas_m3_per_year": null,
+      "diesel_litres_per_year": null,
+      "water_m3_per_year": null,
+      "wastewater_m3_per_year": null,
+      "waste_kg_per_year": null,
+      "packaging_kg_per_year": null
+    }
+  ],
+  "tariffs": {
+    "currency": "INR",
+    "electricity_per_kwh": 8.5,
+    "natural_gas_per_m3": 45.0,
+    "diesel_per_litre": 90.0,
+    "water_per_m3": 25.0,
+    "wastewater_per_m3": 30.0,
+    "waste_disposal_per_kg": 6.0,
+    "packaging_per_kg": 180.0
+  },
+  "conversions": {
+    "natural_gas_kwh_per_m3": 10.55,
+    "diesel_kwh_per_litre": 9.96
+  }
+}
