@@ -23,3 +23,6 @@ Thumbs.db
 
 # Design / dev artifacts
 .impeccable/review/
+# Local runtime artifacts
+var/
+frontend/dist-live/
