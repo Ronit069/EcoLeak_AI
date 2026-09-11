@@ -37,7 +37,7 @@ from app.models.activity import ActivityData
 from app.models.core import Facility, ReportingPeriod
 from app.models.ingestion import IngestionBatch, IngestionError
 from app.models.process import Process
-from app.services import audit, factors as factor_service, units
+from app.services import audit, units
 from app.security import Principal
 
 REQUIRED_HEADERS = ["activity_category", "activity_subcategory", "original_value", "original_unit"]

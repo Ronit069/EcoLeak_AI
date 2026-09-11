@@ -10,7 +10,6 @@ from sqlalchemy.orm import Session
 from app.db import get_db
 from app.deps import api_rate_limit, require_roles
 from app.errors import EmissionFactorNotFoundError
-from app.models.factor import EmissionFactor
 from app.routers.common import ADMIN_ROLES, audit_ctx
 from app.schemas.requests import EmissionFactorCreate
 from app.security import Principal, get_current_principal

@@ -1,7 +1,6 @@
 """Module C/D ingestion tests: validation, normalization, duplicates, warnings."""
 from __future__ import annotations
 
-from app.models.activity import ActivityData
 from tests.factories import auth_headers, make_facility, make_org, make_period, make_process
 
 CSV_HEADER = (

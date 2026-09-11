@@ -1,0 +1,7 @@
+# Minimal, meaningful lint gate: real Python errors only (undefined names,
+# unused imports/variables, syntax). Style rules are intentionally not enforced.
+target-version = "py312"
+line-length = 100
+
+[lint]
+select = ["E9", "F"]

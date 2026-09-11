@@ -6,7 +6,7 @@ from decimal import Decimal
 from app.db import utcnow
 from app.models.factor import EmissionFactor
 from app.services import factors as factor_service
-from tests.factories import auth_headers, make_facility, make_org
+from tests.factories import auth_headers, make_org
 
 
 def _factor(**overrides) -> EmissionFactor:

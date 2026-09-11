@@ -45,7 +45,7 @@ def test_tenant_isolation(client, db):
 def test_read_only_role_can_read_but_not_write(client, db):
     org = make_org(db)
     facility = make_facility(db, org)
-    period = make_period(db, facility)
+    make_period(db, facility)
     make_process(db, facility)
     db.commit()
     headers = auth_headers(org.id, "VIEWER")

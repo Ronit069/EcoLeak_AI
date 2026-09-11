@@ -9,7 +9,6 @@ from __future__ import annotations
 
 from datetime import date
 from decimal import Decimal
-from typing import Iterable, Optional
 from uuid import UUID
 
 from sqlalchemy import Select, select

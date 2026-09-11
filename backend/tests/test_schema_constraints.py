@@ -9,7 +9,6 @@ from sqlalchemy.exc import IntegrityError
 
 from app.db import utcnow
 from app.models.activity import ActivityData
-from app.models.core import ReportingPeriod
 from app.models.process import ProcessLink
 from tests.factories import make_facility, make_org, make_period, make_process
 

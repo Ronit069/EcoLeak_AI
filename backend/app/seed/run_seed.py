@@ -19,7 +19,7 @@ from uuid import UUID
 from sqlalchemy import func, select
 from sqlalchemy.orm import Session
 
-from app.db import SessionLocal, utcnow
+from app.db import SessionLocal
 import app.models as m
 from app.services import quality
 

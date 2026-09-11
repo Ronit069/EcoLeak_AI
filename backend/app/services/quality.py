@@ -14,7 +14,6 @@ from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from app.db import utcnow
-from app.errors import error_payload
 from app.models.activity import ActivityData
 from app.models.calculation import DataQualityAssessment
 from app.models.core import Facility, ReportingPeriod

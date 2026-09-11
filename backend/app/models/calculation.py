@@ -19,7 +19,7 @@ from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
-from app.models.base import CreatedAtMixin, UUIDPrimaryKeyMixin
+from app.models.base import UUIDPrimaryKeyMixin
 
 
 class EmissionCalculation(UUIDPrimaryKeyMixin, Base):

@@ -1,7 +1,6 @@
 """Module E table: emission_factors (DB doc 6.1). Versioned, never overwritten."""
 from __future__ import annotations
 
-import uuid
 from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
@@ -10,13 +9,11 @@ from sqlalchemy import (
     Boolean,
     CheckConstraint,
     Date,
-    DateTime,
     Index,
     Integer,
     Numeric,
     String,
     Text,
-    Uuid,
 )
 from sqlalchemy.orm import Mapped, mapped_column
 
