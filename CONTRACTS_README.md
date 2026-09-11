@@ -16,6 +16,18 @@ Run validation: `python validate_mocks.py` (requires `pydantic>=2`).
 
 ---
 
+## Phase 1 change requests (P1 Frontend)
+
+Recorded per the freeze rule — **no contract files were modified**; these are open questions for the P2–P4 sync, not silent changes.
+
+1. **Module B `carbon_impact_level` (PROPOSED, additive optional field).** P1 needs a per-process Low/Moderate/High/Critical visual state on the Process Mapper nodes. Phase 0 `Process` has no such field; P1 currently stubs it from the hotspot mock severity where a `process_id` matches and defaults to `Low` otherwise, leaving the field name free for the FROZEN-table change in Phase 2. Request: add `carbon_impact_level` to `Process` (or accept P1 mapping severity → node color). No Zod/Pydantic drift until decided.
+2. **Module L circularity score has no mock.** N1 lists `circularity_score`; P3/L1 has no fixture. P1 renders the KPI as "Unavailable (Module L)" instead of inventing a number. Request: a mock `mock_circularity_output.json` or explicit `null` contract so the KPI can light up.
+3. **`annual_production` boundary.** Requirements doc says "production > 0" but `Facility.annual_production` is `ge=0` (zero allowed, blocks intensity). P1 follows the Pydantic contract (`>= 0`), treats zero as intensity-blocking, and flags this doc/contract mismatch for confirmation.
+4. **N2 leak-map drill-down.** ROLE asks facility → process → activity drill-down. N2 returns flat `nodes[]` + `links[]` (links empty in Phase 1). P1 implements the drill-down client-side from hotspots + `activity_data` (D3) and keeps N2 surface unchanged; if the drill should be API-driven, propose an N2 extension in Phase 2.
+5. **C4 client-side import preview.** C4 is `multipart/form-data` → `202 ImportJob`. P1 adds a client-only CSV header/value preview rendering `ValidationIssue[]` shape; the file is never parsed or stored until P2 wires the real endpoint.
+
+---
+
 ## P1 — Frontend / UX
 
 Build Phase 1 screens against the two mock output files and the field names in `contracts/schemas.py`.
