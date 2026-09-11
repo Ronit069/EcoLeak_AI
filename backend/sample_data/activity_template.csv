@@ -1,0 +1,7 @@
+process_code,activity_category,activity_subcategory,original_value,original_unit,source_name,data_source_type,measured_or_estimated,confidence_score,notes
+PRC-BLR,FUEL,Natural gas - stationary combustion for process steam,95000,m3,Gas distributor invoices,CSV,MEASURED,91,
+PRC-DYE,ELECTRICITY,Purchased grid electricity - dyeing machinery,210000,kWh,State utility monthly bills,CSV,MEASURED,92,
+PRC-FIN,MATERIAL,Cotton woven fabric - virgin greige (cradle-to-gate),1100,tonne,Purchase register,CSV,MEASURED,84,Original unit tonne normalized to kg
+PRC-BLR,FUEL,Diesel - boiler start-up and supplementary firing,12000,L,Internal fuel register,CSV,MEASURED,85,
+PRC-DYE,WATER,Freshwater intake - borewell and municipal supply,16000,m3,Flow meter logs,MANUAL,MEASURED,80,
+PRC-TRN,TRANSPORT,Road freight - outbound finished fabric (32t diesel truck),320000,tonne_km,Logistics partner statements,CSV,MEASURED,80,
