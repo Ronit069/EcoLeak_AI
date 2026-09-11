@@ -15,6 +15,7 @@ class CarbonPlatformError(Exception):
 
     error_code = "CARBON_PLATFORM_ERROR"
     severity = "ERROR"
+    status_code = 422
 
     def __init__(self, message: str, details: dict[str, Any] | None = None) -> None:
         super().__init__(message)
@@ -69,3 +70,9 @@ class BudgetExceededError(CarbonPlatformError):
 
 class EntityNotFoundError(CarbonPlatformError):
     error_code = "NOT_FOUND"
+    status_code = 404
+
+
+class MissingParameterError(CarbonPlatformError):
+    error_code = "MISSING_PARAMETER"
+    severity = "WARNING"

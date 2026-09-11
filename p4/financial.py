@@ -177,7 +177,15 @@ def estimate_resource_savings(
 def estimate_resource_co2(
     savings: ResourceSavings, factors: "ResourceEmissionFactors"
 ) -> Optional[Decimal]:
-    """Physical-basis CO2 saving from saved resources x emission factors."""
+    """Physical-basis CO2 saving from saved resources x emission factors.
+
+    Recycling is NOT zero-emission (C2): when the waste stream is diverted to
+    a recycling pathway and ``recycling_processing_emission_factor`` is set,
+    the landfill-avoidance saving is netted against the processing emissions
+    of the recycling pathway itself. The net may be negative (recycling that
+    emits more than the avoided landfill), which the simulator reports as
+    additional emissions per Module K.
+    """
 
     total = ZERO
     used = False
@@ -194,6 +202,14 @@ def estimate_resource_co2(
         if quantity and quantity > ZERO and factor is not None:
             total += quantity * factor
             used = True
+
+    waste = savings.waste_kg
+    processing = factors.recycling_processing_emission_factor
+    if waste and waste > ZERO and processing is not None:
+        # Net out the recycling pathway's own emissions; never assume zero.
+        total -= waste * processing
+        used = True
+
     if not used:
         return None
     return total

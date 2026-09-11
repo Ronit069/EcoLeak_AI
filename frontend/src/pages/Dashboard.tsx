@@ -6,6 +6,7 @@ import { HotspotRail } from '../components/HotspotRail'
 import { RecommendationPlate } from '../components/RecommendationPlate'
 import { SeverityBadge } from '../components/badges'
 import { DrillMap } from '../components/DrillMap'
+import { Pareto } from '../components/Pareto'
 
 export function usePhase1Data() {
   const [dataset, setDataset] = useState<MockDataset | null>(null)
@@ -37,13 +38,17 @@ export function DashboardPage() {
   const dash = deriveDashboard(hotspots, recs)
   const facility = dataset.facilities[0]
   const period = dataset.reporting_periods[0]
+  const scopeLabel =
+    hotspots.scope_boundary?.length > 0
+      ? hotspots.scope_boundary.join(' + ').replace(/_/g, ' ')
+      : 'Scope 1 + 2 (default boundary)'
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Carbon leak bench</h1>
-          <p>{facility.name} · {period.start_date} → {period.end_date} · Scope 1+2 operational</p>
+          <p>{facility.name} · {period.start_date} → {period.end_date} · {scopeLabel}</p>
         </div>
         <span className="provenance">{useMockBadge()} · total {fmtKg(dash.total_kgco2e)} · quality {dash.data_quality_score ?? '—'}/100</span>
       </div>
@@ -93,6 +98,7 @@ export function DashboardPage() {
               Facility → process → activity. Built against the hotspot + dataset mocks; N2 links stay <span className="mono">[]</span> in Phase 1.
             </p>
             <DrillMap dataset={dataset} hotspots={hotspots} />
+            <Pareto items={hotspots.hotspots} />
             <details>
               <summary className="link" style={{ cursor: 'pointer', fontSize: '.85rem' }}>Sequential rail + tabular fallback (Phase 1 N2 alternatives)</summary>
               <div className="leak-rail">
@@ -109,7 +115,7 @@ export function DashboardPage() {
                     {h.rank}
                   </div>
                   <div>
-                    <b>{h.process_name}</b> · <span className="mono">{fmtKg(h.emissions_kgco2e)} · {fmtPct(h.contribution_percent)}</span>{' '}
+                    <b>{h.process_name}</b> · <span className="mono">{fmtKg(h.emissions_kgco2e)} · {h.contribution_percent != null ? fmtPct(h.contribution_percent) : 'share unavailable'}</span>{' '}
                     <SeverityBadge severity={h.severity} />
                     <div style={{ fontSize: '.8rem', color: 'var(--legend)' }}>{h.activity_category} · intensity {h.carbon_intensity ?? '—'}</div>
                   </div>

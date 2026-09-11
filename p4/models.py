@@ -154,6 +154,11 @@ class ResourceEmissionFactors(StrictBaseModel):
     When supplied, the engine computes resource-based CO2 savings (physical
     basis) instead of the percentage-of-hotspot fallback. Both paths are
     deterministic; only the basis differs (recorded in assumptions).
+
+    ``waste_per_kg`` is the landfill-avoidance factor. Recycling pathways are
+    NOT assumed zero-emission (C2): when
+    ``recycling_processing_emission_factor`` is set, the net saving is
+    ``waste_kg x waste_per_kg - waste_kg x recycling_processing_emission_factor``.
     """
 
     electricity_per_kwh: Optional[Decimal] = Field(default=None, ge=0)
@@ -163,6 +168,11 @@ class ResourceEmissionFactors(StrictBaseModel):
     wastewater_per_m3: Optional[Decimal] = Field(default=None, ge=0)
     waste_per_kg: Optional[Decimal] = Field(default=None, ge=0)
     packaging_per_kg: Optional[Decimal] = Field(default=None, ge=0)
+    recycling_processing_emission_factor: Optional[Decimal] = Field(
+        default=None, ge=0,
+        description="kgCO2e per kg of waste processed by the recycling pathway; "
+                    "netted against landfill avoidance.",
+    )
 
 
 class ScoreBreakdown(StrictBaseModel):

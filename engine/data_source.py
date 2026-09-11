@@ -165,3 +165,19 @@ class MockDataSource(InMemoryDataSource):
 
 def load_mock_data_source(dataset_path: str | Path | None = None) -> MockDataSource:
     return MockDataSource(dataset_path)
+
+
+def default_data_source():
+    """Env-driven source selection (B2).
+
+    ``ECOLEAK_SQL_DSN`` set  -> SQLActivityDataSource over P2's tables.
+    Unset (Phase 1 default)  -> mock data source (fallback / test fixture).
+    """
+    import os
+
+    dsn = os.environ.get("ECOLEAK_SQL_DSN")
+    if dsn:
+        from .sql_source import load_sql_data_source
+
+        return load_sql_data_source(dsn)
+    return load_mock_data_source()

@@ -37,13 +37,20 @@ _CONVERSIONS: dict[str, dict[str, Decimal]] = {
         "gwh": Decimal("1000000"),
         "wh": Decimal("0.001"),
     },
-    "volume": {
+    "volume_liquid": {
         "l": Decimal("1"),
         "litre": Decimal("1"),
         "liter": Decimal("1"),
+        "ml": Decimal("0.001"),
         "kl": Decimal("1000"),
-        "m3": Decimal("1000"),
-        "cubic_meter": Decimal("1000"),
+    },
+    # Gas volume is its OWN dimension: m3 must never silently convert to litres
+    # (C1: aligns with backend Pint families VOLUME_GAS != VOLUME_LIQUID).
+    "volume_gas": {
+        "m3": Decimal("1"),
+        "cubic_meter": Decimal("1"),
+        "scm": Decimal("1"),
+        "nm3": Decimal("1"),
     },
     "distance": {
         "km": Decimal("1000"),

@@ -4,6 +4,22 @@
 **Scope:** All four Phase 1 workstreams: P1 (Frontend/UX), P2 (Backend Platform & Data Engine), P3 (Carbon Accounting Engine), P4 (Circular Alternative KB + Recommendation Engine)
 **Method:** Every claim verified against actual code + executed where possible (P3/P4 tests run, shape validators run, severity reproduction executed). P2 DB tests require live PostgreSQL + `psycopg` (not installed in audit env) — reviewed at code level only.
 
+## Completion status (post-fix, 2026-09-12)
+
+| Tier | Item | Status | Evidence (executed) |
+|---|---|---|---|
+| 0 | B1 Merged single API (G2/J2/N1/N2 + J1/M1) | ✅ | `tests/test_merged_api.py` 9/9 (one FastAPI app, httpx TestClient); raw `HTTPException` removed from `engine/api.py` — frozen error shape asserted (error_code/message/severity/details) |
+| 0 | B2 SQL-backed ActivityDataSource | ✅ | `engine/sql_source.py` + `tests/test_sql_source.py` 6/6 (SQLite image of P2 tables: scope totals 224,250/340,800/operational 565,050/all-scope 7,202,350; process/source/scope sums reconcile; matches mock source; env-gated default) |
+| 0 | B3 Factor divergence + severity decision | ✅ (decision b) | `tests/test_real_factors.py` 3/3: real factors → op 566,360.8 (+0.23%), scope-3 honestly unresolved; severity labels recorded (Boiler HIGH 76.41 vs mock CRITICAL 88.5). Decision (b) "mock is illustrative" documented in CONTRACTS_README; `engine/config.py` comment corrected |
+| 1 | C1 Unit dims VOLUME_LIQUID ≠ VOLUME_GAS | ✅ | `tests/test_unit_dimensions.py` 5/5 (m³ never resolves to L factor; cross-dim raises; same-dim fallback still fires) |
+| 1 | C2 Recycling-loop emissions modeled | ✅ | `p4/models.py` + `p4/financial.py`; `tests/test_recycling_emissions.py` 5/5 (net = landfill − processing; negative net allowed) |
+| 1 | C3 Hypothesis property tests | ✅ | `tests/test_properties.py` 5/5 (`@given`): negative always rejected, zero production never divides, missing factor always unresolved, no silent cross-dim conversion, engine never crashes |
+| 2 | D1 Dashboard hardening + Pareto | ✅ | `api.ts` Bearer auth + 401 ApiError; null contribution → "unavailable"; unknown severity → neutral UNKNOWN state; scope label from response; Pareto component. Live E2E: all 6 smoke checks pass (`final-smoke-live.png`) |
+| 2 | D2 Config/secret hygiene | ✅ | `settings.auth_mode=jwt` w/o env secret raises ValidationError; no default secret (config.py `_enforce_jwt_secret`) |
+| 2 | D3 P2 tests on PG | ⏸ Deferred → Phase 2 backlog (owner P2/Mahima) | No docker/psql/initdb in env; `postgresql.JSONB` cannot compile on SQLite (`CompileError: can't render element of type JSONB`); 18 tests written, need PG CI service |
+
+**Final E2E smoke (executed):** merged API on `:8000` with `ECOLEAK_SQL_DSN` -> SQLite-seeded P2 tables; P1 frontend built with `VITE_USE_MOCKS=false VITE_API_URL=http://localhost:8000`; Playwright run — PASS: operational total 565,050, Boiler hotspot, live recommendation cards, LIVE badge, scope label from response.
+
 ---
 
 ## Verdict summary

@@ -10,11 +10,14 @@ estimator strategy therefore lives here as an explicit, overridable setting -
 nothing is hardcoded in the calculation logic. Defaults are documented and are
 the values used by the Phase 0 fixture.
 
-Defaults chosen against the Phase 0 mock:
-- Severity thresholds 80/60/40 reproduce the mock's CRITICAL/HIGH/MODERATE/LOW
-  labels exactly.
-- Improvement reference of 20 percentage points reproduces the mock's Boiler
-  (18% -> 90) and Dyeing (14% -> 70) improvement-potential scores.
+Defaults chosen against the Phase 0 fixture:
+- Severity thresholds 80/60/40 are configurable defaults. NOTE (B3 decision):
+  they do NOT reproduce the mock labels exactly — the live engine scores Boiler
+  76.4 (HIGH) where the mock shows CRITICAL 88.5. The mock is an illustrative
+  reference (shape/rank/contribution), not an exact reproduction target; see
+  CONTRACTS_README "Phase 1 change requests" and tests/test_real_factors.py.
+- Improvement reference of 20 percentage points approximates the fixture's
+  improvement-potential scores.
 """
 
 from __future__ import annotations

@@ -2,8 +2,11 @@
 from __future__ import annotations
 
 from functools import lru_cache
+from typing import Optional
 
+from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import model_validator
 
 
 class Settings(BaseSettings):
@@ -31,9 +34,23 @@ class Settings(BaseSettings):
 
     # Phase 1 uses a stub auth layer ("stub"); Phase 2 swaps in "jwt".
     auth_mode: str = "stub"
-    jwt_secret: str = "dev-only-secret-change-in-production"
+    # No default secret (D2): must come from .env / environment. With
+    # auth_mode=jwt a missing or placeholder secret fails fast at load time so
+    # it can never leak into any deployed configuration.
+    jwt_secret: Optional[str] = None
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
+
+    @model_validator(mode="after")
+    def _enforce_jwt_secret(self) -> "Settings":
+        if self.auth_mode == "jwt":
+            secret = (self.jwt_secret or "").strip()
+            if not secret or secret.startswith("dev-only"):
+                raise ValueError(
+                    "jwt_secret must be set via environment when auth_mode='jwt'; "
+                    "no hardcoded default is allowed."
+                )
+        return self
 
     @property
     def cors_origins_list(self) -> list[str]:

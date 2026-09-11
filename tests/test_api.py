@@ -33,7 +33,11 @@ def test_hotspot_detect_shape_and_top_actionable():
     assert response.status_code == 200
     body = response.json()
     assert body["hotspots"][0]["process_name"] == "Boiler"
-    assert body["top_actionable_hotspot_id"]
+    # G1/G2 return exactly the frozen HotspotDetectionResult envelope.
+    assert "top_actionable_hotspot_id" not in body
+    assert set(body.keys()) == {"facility_id", "reporting_period_id", "generated_at",
+                                "scope_boundary", "total_emissions_kgco2e",
+                                "data_quality_score", "hotspots"}
     assert body["total_emissions_kgco2e"] == 565050
 
 

@@ -5,7 +5,13 @@ import { fmtKg } from '../lib/format'
 
 type Level = 'facility' | 'process' | 'activity'
 const SEV_COLOR: Record<string, string> = {
-  CRITICAL: '#B3261E', HIGH: '#C2570B', MODERATE: '#8A6D00', LOW: '#3A7D44'
+  CRITICAL: '#B3261E', HIGH: '#C2570B', MODERATE: '#8A6D00', LOW: '#3A7D44', UNKNOWN: '#7A766F'
+}
+
+// Unknown / future severity enum values get a distinct neutral state (D1):
+// they must never masquerade as LOW.
+function fillFor(severity: string | null | undefined): string {
+  return (severity && SEV_COLOR[severity]) || SEV_COLOR.UNKNOWN
 }
 
 // Module N Carbon Leak Map — D3 drill-down: facility → process (hotspots) → activity.
@@ -54,13 +60,19 @@ export function DrillMap({
 
     if (level === 'process') {
       const items = hotspots.hotspots
+      if (items.length === 0) {
+        svg.append('text').attr('x', 8).attr('y', 40).attr('fill', '#6B675E')
+          .style('font', '12px var(--font)')
+          .text('No hotspot data — nothing to map yet.')
+        return
+      }
       const x = d3.scaleBand().domain(items.map(h => h.id)).range([8, w - 8]).padding(0.18)
       const y = d3.scaleLinear().domain([0, d3.max(items.map(h => h.emissions_kgco2e)) ?? 1]).range([h - 30, 8])
       const tip = svg.append('g').style('pointer-events', 'none').style('opacity', 0)
       svg.selectAll('rect').data(items).join('rect')
         .attr('x', d => x(d.id)!).attr('width', x.bandwidth())
         .attr('y', d => y(d.emissions_kgco2e)).attr('height', d => y(0) - y(d.emissions_kgco2e))
-        .attr('rx', 6).attr('fill', d => SEV_COLOR[d.severity] ?? '#3A7D44')
+        .attr('rx', 6).attr('fill', d => fillFor(d.severity))
         .style('cursor', 'pointer')
         .on('click', (_e, d) => { useSel(d.process_id ?? null); setLevel('activity') })
         .on('mouseover', (_e, d) => {
@@ -122,7 +134,7 @@ export function DrillMap({
       </div>
       <svg ref={svgRef} style={{ width: '100%', minHeight: 120, display: 'block' }} />
       <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginTop: 6 }} aria-label="Severity legend">
-        {Object.entries(SEV_COLOR).map(([s, c]) => (
+        {[['CRITICAL', SEV_COLOR.CRITICAL], ['HIGH', SEV_COLOR.HIGH], ['MODERATE', SEV_COLOR.MODERATE], ['LOW', SEV_COLOR.LOW], ['Unknown', SEV_COLOR.UNKNOWN]].map(([s, c]) => (
           <span key={s} style={{ display: 'inline-flex', alignItems: 'center', gap: 5, fontSize: '.76rem', color: 'var(--legend-ink)' }}>
             <span style={{ width: 10, height: 10, borderRadius: 3, background: c }} aria-hidden="true" />{s}
           </span>

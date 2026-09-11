@@ -13,22 +13,50 @@ import { hotspotResultSchema, recommendationResultSchema } from './zod'
 
 const USE_MOCKS = (import.meta.env.VITE_USE_MOCKS ?? 'true') !== 'false'
 const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
+const API_TOKEN = (import.meta.env.VITE_API_TOKEN as string | undefined) ?? ''
 
 export const DEMO_IDS = {
   facility_id: '0a1b2c3d-0002-4002-8002-000000000002',
   reporting_period_id: '0a1b2c3d-0003-4003-8003-000000000003'
 }
 
+export class ApiError extends Error {
+  readonly status: number
+  readonly errorCode?: string
+  constructor(status: number, message: string, errorCode?: string) {
+    super(message)
+    this.status = status
+    this.errorCode = errorCode
+  }
+}
+
 async function getJson<T>(url: string): Promise<T> {
-  const res = await fetch(url)
-  if (!res.ok) throw new Error(`Request failed: ${res.status} ${url}`)
+  const headers: Record<string, string> = {}
+  // Auth wiring (D1): when VITE_API_TOKEN is set, send it as a Bearer token;
+  // flips from P2 stub auth to JWT without touching components.
+  if (API_TOKEN) headers.Authorization = `Bearer ${API_TOKEN}`
+  const res = await fetch(url, { headers })
+  if (res.status === 401) {
+    throw new ApiError(401, 'Authentication required — check VITE_API_TOKEN / backend auth_mode.', 'UNAUTHORIZED')
+  }
+  if (!res.ok) {
+    let errorCode: string | undefined
+    try {
+      const body = await res.json() as { error_code?: string; message?: string }
+      errorCode = body.error_code
+      throw new ApiError(res.status, body.message ?? `Request failed: ${res.status} ${url}`, errorCode)
+    } catch (e) {
+      if (e instanceof ApiError) throw e
+      throw new ApiError(res.status, `Request failed: ${res.status} ${url}`)
+    }
+  }
   return res.json() as Promise<T>
 }
 
 export async function fetchDataset(): Promise<MockDataset> {
   if (!USE_MOCKS) {
-    // P2 live: compose from A5/A9/B2/C3. Kept as explicit TODO, not silent fallback.
-    throw new Error('Live dataset endpoints not wired yet — set VITE_USE_MOCKS=true for Phase 1 demo.')
+    // Merged API context endpoint (engine router) — field names match the mock file.
+    return getJson<MockDataset>(`${API_URL}/api/context`)
   }
   return getJson<MockDataset>('/mocks/mock_dataset.json')
 }

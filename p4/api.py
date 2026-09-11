@@ -1,0 +1,223 @@
+"""Merged-API router for Modules J/M/N (P4 ranker + dashboard aggregation).
+
+Serves the P1 swap targets (J2 recommendations, N1 dashboard, N2 leak-map)
+plus the generation/explanation endpoints (J1, M1). All responses follow the
+frozen contract shapes; numbers are serialized canonically (Decimal -> JSON
+number) via :func:`p4.serialization.to_api_dict` / engine ``to_jsonable``.
+
+Mounted by ``backend/app/main.py`` into the single served API.
+"""
+
+from __future__ import annotations
+
+import json
+from decimal import Decimal
+from pathlib import Path
+from typing import Any, Optional
+
+from fastapi import APIRouter, Body, Query
+
+from contracts.schemas import (
+    Facility,
+    HotspotDetectionResult,
+    Organization,
+    Process,
+    RecommendationGenerationResult,
+)
+from engine.api import get_engine
+from engine.serialization import to_jsonable
+from p4.demo.run_demo import _load_json, _resource_factors
+from p4.engine import RecommendationConstraints, generate_with_diagnostics
+from p4.explainability import TemplateExplainer
+from p4.models import FacilityContext
+from p4.serialization import to_api_dict
+
+router = APIRouter(tags=["recommendations"])
+
+REPO_ROOT = Path(__file__).resolve().parent.parent
+MOCKS_DIR = REPO_ROOT / "mocks"
+DEMO_CONTEXT = Path(__file__).resolve().parent / "demo" / "demo_context.json"
+
+_DATASET_CACHE: dict[str, Any] | None = None
+
+
+def _dataset() -> dict[str, Any]:
+    global _DATASET_CACHE
+    if _DATASET_CACHE is None:
+        _DATASET_CACHE = _load_json(MOCKS_DIR / "mock_dataset.json")
+    return _DATASET_CACHE
+
+
+def _context() -> FacilityContext:
+    return FacilityContext.model_validate(_load_json(DEMO_CONTEXT))
+
+
+def _facility_and_org() -> tuple[Organization, Facility, list[Process]]:
+    ds = _dataset()
+    return (
+        Organization.model_validate(ds["organization"]),
+        Facility.model_validate(ds["facilities"][0]),
+        [Process.model_validate(item) for item in ds["processes"]],
+    )
+
+
+def _run_ranker(
+    facility_id: str,
+    reporting_period_id: str,
+    constraints: Optional[RecommendationConstraints],
+) -> RecommendationGenerationResult:
+    """Hotspots (live P3 engine) -> P4 ranker -> frozen J2 envelope."""
+    engine = get_engine()
+    hotspots = engine.hotspot_result(facility_id, reporting_period_id)
+    organization, facility, processes = _facility_and_org()
+    factors = _resource_factors(_dataset())
+    run = generate_with_diagnostics(
+        hotspots,
+        facility,
+        organization=organization,
+        processes=processes,
+        context=_context(),
+        emission_factors=factors,
+        constraints=constraints,
+        explainer=TemplateExplainer(),
+    )
+    return run.result
+
+
+def _dashboard_payload(facility_id: str, reporting_period_id: str) -> dict:
+    engine = get_engine()
+    inventory = engine.calculate_inventory(facility_id, reporting_period_id)
+    hotspots: HotspotDetectionResult = engine.hotspot_result(facility_id, reporting_period_id)
+    ranking = _run_ranker(facility_id, reporting_period_id, None)
+    potential_reduction = Decimal("0")
+    potential_saving = Decimal("0")
+    for rec in ranking.recommendations:
+        if rec.impact is not None:
+            potential_reduction += rec.impact.estimated_co2_saving_kg or Decimal("0")
+            potential_saving += rec.impact.estimated_annual_saving or Decimal("0")
+    circularity = engine.circularity_score(facility_id, reporting_period_id)
+    payload = {
+        "total_kgco2e": inventory.total_kgco2e,
+        "scope_breakdown": {
+            "SCOPE_1": inventory.scope1_kgco2e,
+            "SCOPE_2": inventory.scope2_kgco2e,
+            "SCOPE_3": inventory.scope3_kgco2e,
+        },
+        "carbon_intensity": inventory.carbon_intensity,
+        "production_unit": inventory.production_unit,
+        "largest_hotspot": (
+            to_jsonable(hotspots.hotspots[0]) if hotspots.hotspots else None
+        ),
+        "circularity_score": circularity.total_score,
+        "potential_reduction_kgco2e": potential_reduction,
+        "potential_annual_saving": potential_saving,
+        "last_calculated_at": inventory.generated_at.isoformat(),
+        "empty_state": len(hotspots.hotspots) == 0,
+    }
+    return to_jsonable(payload)
+
+
+# ---------------------------------------------------------------------------
+# Module J
+# ---------------------------------------------------------------------------
+
+
+@router.post(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/recommendations/generate",
+    status_code=202,
+)
+def generate_recommendations(
+    facility_id: str,
+    period_id: str,
+    body: dict = Body(default={}),
+) -> dict:
+    constraints = None
+    if body.get("budget_limit") is not None or body.get("constraints"):
+        raw = dict(body.get("constraints") or {})
+        if body.get("budget_limit") is not None:
+            raw["budget_limit"] = Decimal(str(body["budget_limit"]))
+        constraints = RecommendationConstraints.model_validate(raw)
+    result = _run_ranker(facility_id, period_id, constraints)
+    return to_api_dict(result)
+
+
+@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/recommendations")
+def get_recommendations(
+    facility_id: str,
+    period_id: str,
+    status: Optional[str] = Query(default=None),
+    rank_max: Optional[int] = Query(default=None),
+) -> dict:
+    result = _run_ranker(facility_id, period_id, None)
+    items = list(result.recommendations)
+    if status:
+        items = [r for r in items if r.status.value == status]
+    if rank_max is not None:
+        items = [r for r in items if r.rank <= rank_max]
+    out = result.model_copy(update={"recommendations": items})
+    return to_api_dict(out)
+
+
+@router.get("/api/recommendations/{recommendation_id}/explanation")
+def recommendation_explanation(recommendation_id: str) -> dict:
+    result = _run_ranker(
+        get_engine().default_context()["facility_id"],
+        get_engine().default_context()["reporting_period_id"],
+        None,
+    )
+    rec = next((r for r in result.recommendations if str(r.id) == recommendation_id), None)
+    if rec is None:
+        from fastapi import HTTPException
+
+        raise HTTPException(status_code=404, detail="recommendation not found")
+    scores = {
+        "carbon_saving": rec.carbon_saving_score,
+        "financial_return": rec.financial_return_score,
+        "feasibility": rec.feasibility_score,
+        "circularity": rec.circularity_score,
+        "implementation_speed": rec.implementation_speed_score,
+        "confidence": rec.confidence_score,
+        "final": rec.final_score,
+        "rank": rec.rank,
+    }
+    payload = {
+        "recommendation_id": str(rec.id),
+        "summary": rec.explanation or "",
+        "evidence": {
+            "hotspot_id": str(rec.hotspot_id),
+            "intervention_id": str(rec.intervention_id),
+            "scores": scores,
+            "impact": to_api_dict(rec.impact) if rec.impact else None,
+        },
+        "assumptions": rec.impact.assumptions if rec.impact else {},
+        "confidence_score": rec.confidence_score,
+        "generated_by": "TemplateExplainer (deterministic; LLM narrative is labeled separately)",
+    }
+    return to_jsonable(payload)
+
+
+# ---------------------------------------------------------------------------
+# Module N (P1 dashboard swap targets)
+# ---------------------------------------------------------------------------
+
+
+@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/dashboard")
+def dashboard(facility_id: str, period_id: str) -> dict:
+    return _dashboard_payload(facility_id, period_id)
+
+
+@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/leak-map")
+def leak_map(facility_id: str, period_id: str) -> dict:
+    engine = get_engine()
+    hotspots: HotspotDetectionResult = engine.hotspot_result(facility_id, period_id)
+    nodes = [
+        {
+            "process_id": h.process_id,
+            "process_name": h.process_name,
+            "emissions_kgco2e": h.emissions_kgco2e,
+            "contribution_percent": h.contribution_percent,
+            "severity": h.severity.value,
+        }
+        for h in hotspots.hotspots
+    ]
+    return to_jsonable({"nodes": nodes, "links": []})
