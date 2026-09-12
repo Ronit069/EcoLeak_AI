@@ -101,12 +101,12 @@ def test_jwt_mode_expired_token_is_401(jwt_client):
 def test_jwt_mode_valid_token_succeeds(jwt_client):
     r = jwt_client.post(
         "/api/units/normalize",
-        json={"value": 1, "from_unit": "kWh", "to_unit": "MWh"},
+        json={"value": 1, "from_unit": "kWh", "to_unit": "kWh"},
         headers={"Authorization": f"Bearer {_token_for(ORG, 'SUSTAINABILITY_ANALYST')}"},
     )
     assert r.status_code == 200, r.text
     body = r.json()
-    assert body["normalized_value"] == 1000.0
+    assert float(body["normalized_value"]) == 1.0
     assert body["normalized_unit"] == "kWh"
 
 

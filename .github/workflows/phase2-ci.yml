@@ -107,8 +107,8 @@ jobs:
           PY2
       - name: Start fixed (:8000) + broken (:8001) APIs and proxy-free static servers
         run: |
-          USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8000 &
-          USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak_broken.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8001 &
+          CORS_ALLOW_ORIGINS="http://localhost:5174,http://localhost:5175" USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8000 &
+          CORS_ALLOW_ORIGINS="http://localhost:5174,http://localhost:5175" USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak_broken.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8001 &
           node tests/static_server.mjs frontend/dist 5174 &
           node tests/static_server.mjs frontend/dist-broken 5175 &
           sleep 10

@@ -51,10 +51,16 @@ def test_f7_f2_get_calculations_matches_f1_post(client):
     get = client.get(f"/api/facilities/{F}/reporting-periods/{P}/calculations")
     assert post.status_code == 200, post.text
     assert get.status_code == 200, get.text
-    assert get.json() == post.json()
     assert len(get.json()) > 0
     first = get.json()[0]
     assert {"activity_data_id", "emission_factor_id", "scope", "co2e_kg"} <= set(first.keys())
+
+    # Deterministic values must be identical; only per-call timestamps differ.
+    stable = ("id", "activity_data_id", "emission_factor_id", "scope", "co2e_kg", "calculation_version")
+    def projection(rows):
+        return [{key: row.get(key) for key in stable} for row in rows]
+
+    assert projection(get.json()) == projection(post.json())
 
 
 def test_f7_j3_status_transitions_and_negatives(client):
