@@ -121,7 +121,9 @@ def _seed(engine, factors=None) -> None:
             conn.execute(
                 __import__("engine.sql_source", fromlist=["emission_factors"]).emission_factors.insert(), [row],
             )
-        for iv in data["circular_interventions"]:
+        from seed_interventions import full_intervention_rows
+
+        for iv in full_intervention_rows(data["circular_interventions"]):
             row = {k: (UUID(v) if k == "id" else v) for k, v in iv.items()}
             conn.execute(
                 __import__("engine.sql_source", fromlist=["circular_interventions"]).circular_interventions.insert(),

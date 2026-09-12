@@ -2,7 +2,7 @@
   "meta": {
     "role": "P3",
     "phase": "phase2",
-    "data_source": "P2 SQL tables + backend/app/seed/real_factors.json",
+    "data_source": "mock_dataset.json (Phase 1 fixture)",
     "generated_at": "2026-09-12T12:00:00+00:00",
     "facility_id": "0a1b2c3d-0002-4002-8002-000000000002",
     "reporting_period_id": "0a1b2c3d-0003-4003-8003-000000000003",
@@ -10,53 +10,23 @@
   },
   "F_carbon": {
     "inventory_summary": {
-      "scope1_kgco2e": 225560.8,
+      "scope1_kgco2e": 224250,
       "scope2_kgco2e": 340800,
-      "scope3_kgco2e": 0,
-      "total_kgco2e": 566360.8,
-      "carbon_intensity": 566.3608,
+      "scope3_kgco2e": 6637300,
+      "total_kgco2e": 7202350,
+      "carbon_intensity": 7202.35,
       "production_unit": "tonne",
       "generated_at": "2026-09-12T12:00:00+00:00"
     },
     "unresolved": [
       {
         "severity": "WARNING",
-        "code": "EMISSION_FACTOR_NOT_FOUND",
-        "message": "No active emission factor matches this activity category and unit.",
-        "field": "activity_data[0a1b2c3d-00a7-40a7-80a7-0000000000a7]",
-        "details": {
-          "activity_category": "MATERIAL",
-          "activity_subcategory": "Cotton woven fabric - virgin greige (cradle-to-gate)"
-        }
-      },
-      {
-        "severity": "WARNING",
-        "code": "EMISSION_FACTOR_NOT_FOUND",
-        "message": "No active emission factor matches this activity category and unit.",
+        "code": "NO_MATCHING_FACTOR",
+        "message": "No emission factor matched the activity description above the confidence threshold.",
         "field": "activity_data[0a1b2c3d-00a8-40a8-80a8-0000000000a8]",
         "details": {
           "activity_category": "MATERIAL",
           "activity_subcategory": "Dyeing chemicals and auxiliaries - average mix"
-        }
-      },
-      {
-        "severity": "WARNING",
-        "code": "EMISSION_FACTOR_NOT_FOUND",
-        "message": "No active emission factor matches this activity category and unit.",
-        "field": "activity_data[0a1b2c3d-00a9-40a9-80a9-0000000000a9]",
-        "details": {
-          "activity_category": "MATERIAL",
-          "activity_subcategory": "LDPE packaging film - virgin"
-        }
-      },
-      {
-        "severity": "WARNING",
-        "code": "EMISSION_FACTOR_NOT_FOUND",
-        "message": "No active emission factor matches this activity category and unit.",
-        "field": "activity_data[0a1b2c3d-00aa-40aa-80aa-0000000000aa]",
-        "details": {
-          "activity_category": "WATER",
-          "activity_subcategory": "Freshwater intake - borewell and municipal supply"
         }
       },
       {
@@ -68,63 +38,93 @@
           "activity_category": "WASTE",
           "activity_subcategory": "Wastewater discharge - treated effluent to CETP"
         }
-      },
-      {
-        "severity": "WARNING",
-        "code": "EMISSION_FACTOR_NOT_FOUND",
-        "message": "No active emission factor matches this activity category and unit.",
-        "field": "activity_data[0a1b2c3d-00ac-40ac-80ac-0000000000ac]",
-        "details": {
-          "activity_category": "WASTE",
-          "activity_subcategory": "Textile waste - fabric offcuts and trimmings"
-        }
-      },
-      {
-        "severity": "WARNING",
-        "code": "EMISSION_FACTOR_NOT_FOUND",
-        "message": "No active emission factor matches this activity category and unit.",
-        "field": "activity_data[0a1b2c3d-00ad-40ad-80ad-0000000000ad]",
-        "details": {
-          "activity_category": "TRANSPORT",
-          "activity_subcategory": "Road freight - outbound finished fabric (32t diesel truck)"
-        }
       }
     ],
     "factor_provenance": [
       {
-        "factor_id": "0a1b2c3d-00e1-40e1-80e1-0000000000e1",
-        "factor_code": "EF-ELEC-GRID-IN-CEA21-FY2024-25",
-        "version": "CEA-21.0",
-        "source_name": "Central Electricity Authority (India) - CO2 Baseline Database for the Indian Power Sector, Version 21.0",
-        "source_year": 2025,
+        "factor_id": "0a1b2c3d-00f1-40f1-80f1-0000000000f1",
+        "factor_code": "EF-ELEC-GRID-IN-2023",
+        "version": "2023.1",
+        "source_name": "CEA India CO2 Baseline Database (mock)",
+        "source_year": 2023,
         "scope": "SCOPE_2",
-        "total_co2e_factor": "0.71000000",
+        "total_co2e_factor": "0.71",
         "input_unit": "kWh"
       },
       {
-        "factor_id": "0a1b2c3d-00e5-40e5-80e5-0000000000e5",
-        "factor_code": "EF-FUEL-NATURALGAS-DEFRA2023",
-        "version": "DEFRA-2023",
-        "source_name": "UK DESNZ/DEFRA - Greenhouse gas reporting: conversion factors 2023 (Gaseous fuels)",
-        "source_year": 2023,
+        "factor_id": "0a1b2c3d-00f2-40f2-80f2-0000000000f2",
+        "factor_code": "EF-FUEL-NG-M3-2006",
+        "version": "2006.2",
+        "source_name": "IPCC 2006 Guidelines Vol. 2 (mock)",
+        "source_year": 2006,
         "scope": "SCOPE_1",
-        "total_co2e_factor": "2.03840000",
+        "total_co2e_factor": "2.022",
         "input_unit": "m3"
       },
       {
-        "factor_id": "0a1b2c3d-00e3-40e3-80e3-0000000000e3",
-        "factor_code": "EF-FUEL-DIESEL-MINERAL-DEFRA2023",
-        "version": "DEFRA-2023",
-        "source_name": "UK DESNZ/DEFRA - Greenhouse gas reporting: conversion factors 2023 (Fuels, liquid)",
-        "source_year": 2023,
+        "factor_id": "0a1b2c3d-00f3-40f3-80f3-0000000000f3",
+        "factor_code": "EF-FUEL-DIESEL-L-2006",
+        "version": "2006.2",
+        "source_name": "IPCC 2006 Guidelines Vol. 2 (mock)",
+        "source_year": 2006,
         "scope": "SCOPE_1",
-        "total_co2e_factor": "2.65940000",
+        "total_co2e_factor": "2.68",
         "input_unit": "L"
+      },
+      {
+        "factor_id": "0a1b2c3d-00f4-40f4-80f4-0000000000f4",
+        "factor_code": "EF-MAT-COTTON-KG-2022",
+        "version": "2022.1",
+        "source_name": "Higg MSI / Textile Exchange (mock)",
+        "source_year": 2022,
+        "scope": "SCOPE_3",
+        "total_co2e_factor": "5.9",
+        "input_unit": "kg"
+      },
+      {
+        "factor_id": "0a1b2c3d-00f5-40f5-80f5-0000000000f5",
+        "factor_code": "EF-MAT-LDPE-KG-2021",
+        "version": "2021.1",
+        "source_name": "PlasticsEurope EcoProfile (mock)",
+        "source_year": 2021,
+        "scope": "SCOPE_3",
+        "total_co2e_factor": "2.1",
+        "input_unit": "kg"
+      },
+      {
+        "factor_id": "0a1b2c3d-00f6-40f6-80f6-0000000000f6",
+        "factor_code": "EF-WATER-SUPPLY-M3-2020",
+        "version": "2020.1",
+        "source_name": "Municipal utility study (mock)",
+        "source_year": 2020,
+        "scope": "SCOPE_3",
+        "total_co2e_factor": "0.35",
+        "input_unit": "m3"
+      },
+      {
+        "factor_id": "0a1b2c3d-00f7-40f7-80f7-0000000000f7",
+        "factor_code": "EF-WASTE-TEXTILE-LF-KG-2023",
+        "version": "2023.1",
+        "source_name": "US EPA WARM (mock)",
+        "source_year": 2023,
+        "scope": "SCOPE_3",
+        "total_co2e_factor": "0.8",
+        "input_unit": "kg"
+      },
+      {
+        "factor_id": "0a1b2c3d-00f8-40f8-80f8-0000000000f8",
+        "factor_code": "EF-TRANSPORT-TRUCK-TKM-2023",
+        "version": "2023.1",
+        "source_name": "GLEC Framework (mock)",
+        "source_year": 2023,
+        "scope": "SCOPE_3",
+        "total_co2e_factor": "0.105",
+        "input_unit": "tonne_km"
       }
     ],
     "onsite_generation_kgco2e": 0,
     "exported_electricity_kgco2e": 0,
-    "data_quality_score": 89.33
+    "data_quality_score": 81.88
   },
   "G_hotspots": {
     "facility_id": "0a1b2c3d-0002-4002-8002-000000000002",
@@ -134,8 +134,8 @@
       "SCOPE_1",
       "SCOPE_2"
     ],
-    "total_emissions_kgco2e": 566360.8,
-    "data_quality_score": 89.33,
+    "total_emissions_kgco2e": 565050,
+    "data_quality_score": 81.88,
     "hotspots": [
       {
         "id": "67068b4d-ac4f-5052-b0b2-7a9d8062c9d6",
@@ -144,15 +144,15 @@
         "process_id": "0a1b2c3d-0006-4006-8006-000000000006",
         "asset_id": null,
         "hotspot_type": "PROCESS",
-        "emissions_kgco2e": 225560.8,
-        "contribution_percent": 39.8263,
-        "carbon_intensity": 225.5608,
+        "emissions_kgco2e": 224250,
+        "contribution_percent": 39.6868,
+        "carbon_intensity": 224.25,
         "inefficiency_score": 100,
         "waste_ratio_score": null,
         "improvement_potential_score": 90,
-        "hotspot_score": 76.41,
+        "hotspot_score": 76.36,
         "severity": "HIGH",
-        "explanation": "Boiler emits 225,561 kgCO2e (39.83% of the SCOPE_1, SCOPE_2 total). Dominant activity category: FUEL. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
+        "explanation": "Boiler emits 224,250 kgCO2e (39.69% of the SCOPE_1, SCOPE_2 total). Dominant activity category: FUEL. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
         "created_at": "2026-09-12T12:00:00+00:00",
         "rank": 1,
         "process_name": "Boiler",
@@ -166,14 +166,14 @@
         "asset_id": null,
         "hotspot_type": "PROCESS",
         "emissions_kgco2e": 149100,
-        "contribution_percent": 26.326,
+        "contribution_percent": 26.387,
         "carbon_intensity": 149.1,
-        "inefficiency_score": 61.22,
+        "inefficiency_score": 61.63,
         "waste_ratio_score": null,
         "improvement_potential_score": 70,
-        "hotspot_score": 51.83,
+        "hotspot_score": 52.02,
         "severity": "MODERATE",
-        "explanation": "Dyeing emits 149,100 kgCO2e (26.33% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
+        "explanation": "Dyeing emits 149,100 kgCO2e (26.39% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
         "created_at": "2026-09-12T12:00:00+00:00",
         "rank": 2,
         "process_name": "Dyeing",
@@ -187,14 +187,14 @@
         "asset_id": null,
         "hotspot_type": "PROCESS",
         "emissions_kgco2e": 106500,
-        "contribution_percent": 18.8043,
+        "contribution_percent": 18.8479,
         "carbon_intensity": 106.5,
-        "inefficiency_score": 39.61,
+        "inefficiency_score": 39.88,
         "waste_ratio_score": null,
-        "improvement_potential_score": 50,
-        "hotspot_score": 36.05,
+        "improvement_potential_score": null,
+        "hotspot_score": 31.93,
         "severity": "LOW",
-        "explanation": "Drying emits 106,500 kgCO2e (18.80% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
+        "explanation": "Drying emits 106,500 kgCO2e (18.85% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied.",
         "created_at": "2026-09-12T12:00:00+00:00",
         "rank": 3,
         "process_name": "Drying",
@@ -208,14 +208,14 @@
         "asset_id": null,
         "hotspot_type": "PROCESS",
         "emissions_kgco2e": 56800,
-        "contribution_percent": 10.0289,
+        "contribution_percent": 10.0522,
         "carbon_intensity": 56.8,
-        "inefficiency_score": 14.4,
-        "waste_ratio_score": null,
+        "inefficiency_score": 14.5,
+        "waste_ratio_score": 52.98,
         "improvement_potential_score": 45,
-        "hotspot_score": 21.96,
+        "hotspot_score": 26.66,
         "severity": "LOW",
-        "explanation": "Finishing emits 56,800 kgCO2e (10.03% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
+        "explanation": "Finishing emits 56,800 kgCO2e (10.05% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
         "created_at": "2026-09-12T12:00:00+00:00",
         "rank": 4,
         "process_name": "Finishing",
@@ -229,14 +229,14 @@
         "asset_id": null,
         "hotspot_type": "PROCESS",
         "emissions_kgco2e": 28400,
-        "contribution_percent": 5.0145,
+        "contribution_percent": 5.0261,
         "carbon_intensity": 28.4,
         "inefficiency_score": 0,
         "waste_ratio_score": null,
         "improvement_potential_score": 20,
-        "hotspot_score": 8.7,
+        "hotspot_score": 8.71,
         "severity": "LOW",
-        "explanation": "Packaging emits 28,400 kgCO2e (5.01% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
+        "explanation": "Packaging emits 28,400 kgCO2e (5.03% of the SCOPE_1, SCOPE_2 total). Dominant activity category: ELECTRICITY. Deterministic activity x factor calculation; no estimated value is substituted for a missing factor. Notes: inefficiency is an internal intensity proxy because no benchmark was supplied; improvement potential derived from applicable interventions in the knowledge base.",
         "created_at": "2026-09-12T12:00:00+00:00",
         "rank": 5,
         "process_name": "Packaging",
@@ -247,72 +247,35 @@
   "K_simulation": {
     "scenario_id": "c2b82154-17f5-57c4-a861-4bcab4f10941",
     "assessment": {
-      "id": "44e407b7-c38d-552a-9382-c7f8968613de",
+      "id": "b17e4197-041e-5e2f-9261-b7b9fa1424cb",
       "scenario_id": "c2b82154-17f5-57c4-a861-4bcab4f10941",
-      "baseline_emissions_kg": 566360.8,
-      "projected_emissions_kg": 508600.97984,
-      "total_co2_saving_kg": 57759.82016,
-      "reduction_percent": 10.198414,
-      "total_capex": 625000,
-      "annual_saving": 1031196,
-      "payback_years": 0.61,
+      "baseline_emissions_kg": 7202350,
+      "projected_emissions_kg": 7141874.5,
+      "total_co2_saving_kg": 60475.5,
+      "reduction_percent": 0.839663,
+      "total_capex": 5850000,
+      "annual_saving": 1105650,
+      "payback_years": 5.29,
       "generated_at": "2026-09-12T12:00:00+00:00"
     },
     "interventions": [
       {
-        "intervention_id": "0a1b2c3d-0021-4021-8021-000000000021",
-        "intervention_code": "INT-CAIR-011",
-        "title": "Compressed-air leak management and pressure optimization",
+        "intervention_id": "0a1b2c3d-0011-4011-8011-000000000011",
+        "intervention_code": "INT-WHR-001",
+        "title": "Boiler waste-heat recovery (flue-gas economizer)",
         "adoption_percentage": 100,
-        "capex": 200000,
-        "baseline_emissions_kg": 566360.8,
-        "projected_emissions_kg": 521051.936,
-        "co2_saving_kg": 45308.864,
+        "capex": 1600000,
+        "baseline_emissions_kg": 7202350,
+        "projected_emissions_kg": 7168712.5,
+        "co2_saving_kg": 33637.5,
         "baseline_cost": 11355000,
-        "projected_cost": 10619400,
-        "annual_saving": 735600,
-        "payback_years": 0.27,
+        "projected_cost": 10551750,
+        "annual_saving": 803250,
+        "payback_years": 1.99,
         "payback_status": "AVAILABLE",
         "payback_reason": null,
-        "cost_per_tonne_co2_avoided": 4414.15,
-        "energy_saving": 46960,
-        "waste_reduction": 0,
-        "assumptions": {
-          "method": "sequential quantity reduction on remaining baseline (no double counting)",
-          "adoption_percentage": "100",
-          "capex_strategy": "MID",
-          "reduction_pct_strategy": "MAX",
-          "reduction_basis": "ENERGY_WASTE_THEN_CO2",
-          "static_prices": true,
-          "cost_model_note": "Static mock resource prices (Phase 1 fixture). Replace with P2 cost data; annual_saving is unavailable if a targeted activity has no price.",
-          "currency": "INR",
-          "target_processes": [],
-          "target_categories": [
-            "ELECTRICITY",
-            "FUEL"
-          ],
-          "co2_saving_basis": "baseline minus projected emissions after quantity reductions",
-          "cost_per_tonne_co2_avoided_basis": "CAPEX / first-year tCO2e avoided",
-          "payback_rule": "payback = CAPEX / annual_saving; None (UNAVAILABLE) when annual_saving <= 0"
-        }
-      },
-      {
-        "intervention_id": "0a1b2c3d-0019-4019-8019-000000000019",
-        "intervention_code": "INT-CONDENSATE-009",
-        "title": "Condensate polishing and return maximization",
-        "adoption_percentage": 100,
-        "capex": 425000,
-        "baseline_emissions_kg": 521051.936,
-        "projected_emissions_kg": 508600.97984,
-        "co2_saving_kg": 12450.95616,
-        "baseline_cost": 10619400,
-        "projected_cost": 10323804,
-        "annual_saving": 295596,
-        "payback_years": 1.44,
-        "payback_status": "AVAILABLE",
-        "payback_reason": null,
-        "cost_per_tonne_co2_avoided": 34133.92,
-        "energy_saving": 5906.4,
+        "cost_per_tonne_co2_avoided": 47565.96,
+        "energy_saving": 16050,
         "waste_reduction": 0,
         "assumptions": {
           "method": "sequential quantity reduction on remaining baseline (no double counting)",
@@ -328,6 +291,44 @@
           ],
           "target_categories": [
             "FUEL"
+          ],
+          "co2_saving_basis": "baseline minus projected emissions after quantity reductions",
+          "cost_per_tonne_co2_avoided_basis": "CAPEX / first-year tCO2e avoided",
+          "payback_rule": "payback = CAPEX / annual_saving; None (UNAVAILABLE) when annual_saving <= 0"
+        }
+      },
+      {
+        "intervention_id": "0a1b2c3d-0012-4012-8012-000000000012",
+        "intervention_code": "INT-SOLAR-002",
+        "title": "Rooftop solar PV for wet-process loads",
+        "adoption_percentage": 100,
+        "capex": 4250000,
+        "baseline_emissions_kg": 7168712.5,
+        "projected_emissions_kg": 7141874.5,
+        "co2_saving_kg": 26838,
+        "baseline_cost": 10551750,
+        "projected_cost": 10249350,
+        "annual_saving": 302400,
+        "payback_years": 14.05,
+        "payback_status": "AVAILABLE",
+        "payback_reason": null,
+        "cost_per_tonne_co2_avoided": 158357.55,
+        "energy_saving": 37800,
+        "waste_reduction": 0,
+        "assumptions": {
+          "method": "sequential quantity reduction on remaining baseline (no double counting)",
+          "adoption_percentage": "100",
+          "capex_strategy": "MID",
+          "reduction_pct_strategy": "MAX",
+          "reduction_basis": "ENERGY_WASTE_THEN_CO2",
+          "static_prices": true,
+          "cost_model_note": "Static mock resource prices (Phase 1 fixture). Replace with P2 cost data; annual_saving is unavailable if a targeted activity has no price.",
+          "currency": "INR",
+          "target_processes": [
+            "0a1b2c3d-0004-4004-8004-000000000004"
+          ],
+          "target_categories": [
+            "ELECTRICITY"
           ],
           "co2_saving_basis": "baseline minus projected emissions after quantity reductions",
           "cost_per_tonne_co2_avoided_basis": "CAPEX / first-year tCO2e avoided",
