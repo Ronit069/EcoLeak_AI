@@ -52,11 +52,18 @@ def test_k1_live_response_validates_against_formal_envelope_model() -> None:
             "interventions": [{"intervention_id": "0a1b2c3d-0011-4011-8011-000000000011", "adoption_percentage": 80}],
         },
     )
+    # STRICT (adversarial re-verification): success requires 200 + envelope +
+    # no error payload. There is deliberately no OR-acceptance of any
+    # fallback-shaped response, and payback_status uses ONE canonical
+    # vocabulary (the engine's uppercase enum) — no dual-vocabulary union.
     assert r.status_code == 200, r.text
-    parsed = ScenarioSimulationEnvelope.model_validate(r.json())
+    body = r.json()
+    assert "error_code" not in body, f"engine error leaked into K1: {body}"
+    parsed = ScenarioSimulationEnvelope.model_validate(body)
     ImpactAssessment.model_validate(parsed.assessment)
     assert parsed.assessment.baseline_emissions_kg >= 0
-    assert parsed.payback_status in {None, "AVAILABLE", "UNAVAILABLE", "available", "unavailable"}
+    assert parsed.payback_status in {None, "AVAILABLE", "UNAVAILABLE"}
+    assert parsed.payback_status != "available", "lowercase vocabulary leaking from a fallback path"  # noqa: E712 - deliberate strictness
 
 
 def test_q1_feedback_guard_uses_frozen_error_shape() -> None:
