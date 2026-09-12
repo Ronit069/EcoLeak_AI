@@ -1,0 +1,187 @@
+/* EcoLeak AI — Next-Generation Industrial Climate Intelligence Design Tokens
+   Deep Obsidian, Translucent Glassmorphism, Luminous Neon Accents, Modern Display Typography */
+
+:root {
+  /* Deep Obsidian Ground & Ambient Surfaces */
+  --bg: #06080d;
+  --bg-darker: #030407;
+  --bg-elevated: #0a0e16;
+  
+  /* Translucent Glassmorphic Surfaces */
+  --glass: rgba(13, 18, 28, 0.72);
+  --glass-elevated: rgba(18, 25, 38, 0.82);
+  --glass-card: rgba(15, 21, 33, 0.65);
+  --glass-border: rgba(255, 255, 255, 0.08);
+  --glass-border-bright: rgba(255, 255, 255, 0.16);
+  --glass-border-accent: rgba(6, 182, 212, 0.35);
+
+  /* Luminous Semantic Severity (Clean, High-Tech Neons) */
+  --emerald: #10b981;
+  --emerald-glow: rgba(16, 185, 129, 0.25);
+  --cyan: #06b6d4;
+  --cyan-bright: #22d3ee;
+  --cyan-glow: rgba(6, 182, 212, 0.25);
+  --amber: #f59e0b;
+  --amber-glow: rgba(245, 158, 11, 0.25);
+  --orange: #f97316;
+  --orange-glow: rgba(249, 115, 22, 0.25);
+  --coral: #f43f5e;
+  --coral-glow: rgba(244, 63, 94, 0.35);
+  --purple: #a855f7;
+  --purple-glow: rgba(168, 85, 247, 0.25);
+
+  /* GHG Scope Spectrum */
+  --scope1: #f97316;
+  --scope2: #06b6d4;
+  --scope3: #a855f7;
+
+  /* Text & Ink Hierarchy */
+  --ink: #f8fafc;
+  --ink-secondary: #cbd5e1;
+  --ink-muted: #94a3b8;
+  --ink-faint: #475569;
+
+  /* Typography */
+  --sans: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  --mono: 'JetBrains Mono', ui-monospace, SFMono-Regular, monospace;
+
+  /* Scale */
+  --fs-2xs: 10px;
+  --fs-xs: 12px;
+  --fs-sm: 13.5px;
+  --fs-md: 14.5px;
+  --fs-lg: 16.5px;
+  --fs-xl: 20px;
+  --fs-2xl: 26px;
+  --fs-3xl: 34px;
+  --fs-hero: 44px;
+
+  /* Corner Radii */
+  --r-xs: 5px;
+  --r-sm: 8px;
+  --r: 12px;
+  --r-lg: 16px;
+  --r-full: 9999px;
+
+  /* Shadows & Ambient Glows */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.4);
+  --shadow-card: 0 8px 24px -4px rgba(0, 0, 0, 0.5), 0 2px 6px -2px rgba(0, 0, 0, 0.3);
+  --shadow-glow-cyan: 0 0 30px -5px rgba(6, 182, 212, 0.3);
+  --shadow-glow-emerald: 0 0 30px -5px rgba(16, 185, 129, 0.3);
+  --shadow-glow-coral: 0 0 30px -5px rgba(244, 63, 94, 0.35);
+
+  /* Layout */
+  --sidebar: 248px;
+  --topbar: 56px;
+  --content: min(1920px, 100%);
+
+  /* Compatibility Aliases for components */
+  --surface: var(--glass);
+  --surface-1: var(--glass);
+  --surface-2: rgba(18, 25, 38, 0.85);
+  --surface-3: rgba(26, 36, 54, 0.9);
+  --border: var(--glass-border);
+  --border-2: var(--glass-border-bright);
+  --ink-1: var(--ink);
+  --ink-2: var(--ink-secondary);
+  --ink-3: var(--ink-muted);
+  --ink-4: var(--ink-faint);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  height: 100%;
+  background-color: var(--bg);
+}
+
+body {
+  margin: 0;
+  color: var(--ink);
+  font-family: var(--sans);
+  font-size: var(--fs-md);
+  line-height: 1.55;
+  background: 
+    radial-gradient(ellipse 900px 600px at 80% 5%, rgba(6, 182, 212, 0.07), transparent 70%),
+    radial-gradient(ellipse 900px 600px at 10% 90%, rgba(16, 185, 129, 0.05), transparent 70%),
+    var(--bg);
+  background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+h1, h2, h3, h4 {
+  margin: 0;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--ink);
+}
+
+p {
+  margin: 0 0 8px;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.num {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+  font-feature-settings: 'tnum' 1;
+}
+
+.mono {
+  font-family: var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.label {
+  font-family: var(--mono);
+  font-size: var(--fs-2xs);
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--ink-muted);
+  font-weight: 600;
+}
+
+.muted { color: var(--ink-muted); }
+.faint { color: var(--ink-faint); }
+.right { text-align: right; }
+.nowrap { white-space: nowrap; }
+.small { font-size: var(--fs-sm); }
+.tiny { font-size: var(--fs-xs); }
+.spacer { flex: 1; }
+
+:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: 2px;
+}
+
+::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.2);
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation: none !important;
+    transition: none !important;
+  }
+}
