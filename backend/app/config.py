@@ -51,13 +51,27 @@ class Settings(BaseSettings):
 
     @model_validator(mode="after")
     def _enforce_jwt_secret(self) -> "Settings":
-        if self.auth_mode == "jwt":
-            secret = (self.jwt_secret or "").strip()
-            if not secret or secret.startswith("dev-only"):
-                raise ValueError(
-                    "jwt_secret must be set via environment when auth_mode='jwt'; "
-                    "no hardcoded default is allowed."
-                )
+        secret = (self.jwt_secret or "").strip()
+        # BLOCKER-3 remediation: known placeholders are rejected everywhere;
+        # ANY non-development environment must fail fast when the secret is
+        # unset or placeholder-shaped — never silently run with a default.
+        placeholders = {"change-me-in-production", "dev-only-secret-change-in-production"}
+        placeholder_shaped = secret.startswith("dev-only") or secret.startswith("change-me")
+        if secret in placeholders or placeholder_shaped:
+            raise ValueError(
+                "jwt_secret must not be a placeholder value even in development; "
+                "set a real secret via JWT_SECRET."
+            )
+        if self.auth_mode == "jwt" and not secret:
+            raise ValueError(
+                "jwt_secret must be set via environment when auth_mode='jwt'; "
+                "no hardcoded default is allowed."
+            )
+        if self.environment != "development" and not secret:
+            raise ValueError(
+                "jwt_secret must be set via environment in non-development "
+                f"environments (got environment={self.environment!r}); refusing to start."
+            )
         return self
 
     @property

@@ -13,6 +13,7 @@ import json
 from datetime import date, datetime
 from decimal import Decimal
 from pathlib import Path
+import sys
 from typing import Any
 from uuid import UUID
 
@@ -24,6 +25,8 @@ import app.models as m
 from app.services import quality
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 MOCK_DATASET = REPO_ROOT / "mocks" / "mock_dataset.json"
 REAL_FACTORS = Path(__file__).resolve().parent / "real_factors.json"
 
@@ -86,7 +89,12 @@ def seed_mock_dataset(db: Session) -> None:
     for row in data["emission_factors"]:
         _add_if_absent(db, m.EmissionFactor, row)
     db.flush()
-    for row in data["circular_interventions"]:
+    # Phase 2 remediation (BLOCKER 1): seed P4's full 19-entry library so K1's
+    # simulator can resolve every intervention_id that live J2 emits (the
+    # mock dataset only carried 5).
+    from seed_interventions import full_intervention_rows
+
+    for row in full_intervention_rows(data["circular_interventions"]):
         _add_if_absent(db, m.CircularIntervention, row)
     db.flush()
     for row in data["activity_data"]:

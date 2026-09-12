@@ -1,0 +1,109 @@
+name: Phase 2 CI — PostgreSQL-gated suites
+
+on:
+  push:
+    branches: [main, phase2-fixes]
+  pull_request:
+
+jobs:
+  postgres-suite:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecoleak_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      TEST_DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/ecoleak_test
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/ecoleak_test
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install backend + root requirements
+        run: |
+          python -m pip install -q -r backend/requirements.txt
+          python -m pip install -q -r requirements.txt
+
+      - name: Backend PG-gated suite (contract parity, schema constraints, ingestion volume, audit, double counting, Module P real)
+        working-directory: backend
+        run: python -m pytest tests/ -q
+
+      - name: P3 SQL-backed source + flag + property suites (PG)
+        working-directory: .
+        run: |
+          python -m pytest tests/test_sql_source.py tests/test_data_source_flag.py \
+                 tests/test_properties.py tests/test_unit_dimensions.py \
+                 tests/test_recycling_emissions.py tests/test_real_factors.py -q
+          python -m pytest tests/test_p4_phase2_integration.py -q
+
+      - name: Mock shape gates
+        run: |
+          python validate_mocks.py
+          python validate_against_mock.py
+          python tools/phase2_p3_shape_diff.py
+          python tools/phase2_p4_shape_diff.py
+
+      - name: Frontend build
+        working-directory: frontend
+        run: |
+          npm ci --no-audit --no-fund
+          npm run build
+
+  P2 migration + seed smoke:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: ecoleak
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      DATABASE_URL: postgresql+psycopg://postgres:postgres@localhost:5432/ecoleak
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install -q -r backend/requirements.txt
+          python -m pip install -q -r requirements.txt
+      - name: Alembic upgrade + full 19-intervention seed + engine-over-PG smoke
+        working-directory: backend
+        run: |
+          python -m alembic upgrade head
+          python -m app.seed.run_seed
+          cd ..
+          python - <<'PY'
+          from sqlalchemy import create_engine
+          from engine.sql_source import SQLActivityDataSource
+          from engine.service import EcoLeakEngine
+          pg = create_engine("postgresql+psycopg://postgres:postgres@localhost:5432/ecoleak")
+          src = SQLActivityDataSource(pg)
+          fid = str(src.list_facilities()[0].id); pid = str(src.list_reporting_periods(fid)[0].id)
+          inv = EcoLeakEngine(data_source=src).calculate_inventory(fid, pid)
+          assert str(inv.operational_kgco2e) == "566360.800000", inv.operational_kgco2e
+          assert len(src.get_interventions()) == 19
+          print("PG smoke OK: op =", inv.operational_kgco2e, "| interventions =", len(src.get_interventions()))
+          PY

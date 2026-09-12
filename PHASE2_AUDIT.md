@@ -171,9 +171,31 @@ Hops: **ingestion (P2) → normalization → F → G → J → M → N → P1 re
 
 ---
 
-# BLOCKING RISK REPORT
+# BLOCKING RISK REPORT — REMEDIATION STATUS (2026-09-12, branch `phase2-fixes`)
 
-**Three tiers, priority order:**
+All three blockers and both contract deviations from the audit are **CLOSED with
+executed evidence** — see `docs/phase2/PHASE2_REMEDIATION.md` (status table with
+commands/outputs): K1 ids fully resolved (19 seeded, all-18 live ids → 200),
+silent fallback removed (`computedVia` flag + visible labels), PG suite executed
+(backend 54/54 on PostgreSQL 16.6 + permanent CI workflow), placeholder guard
+fail-fast verified, Q wired, N1/K1 contract formalized, sequencing re-verified
+with timestamped artifacts. Remaining: admin-only GitHub branch protection
+(documented for owner), H2/H3 + Q-persistence Phase-3 backlog with owners.
+
+## Remaining open items (original findings, now with owners)
+
+| Item in original report | Status after remediation |
+|---|---|
+| K1 shape deviation + scenario-slider 404 | ✅ CLOSED (canonical envelope formalized; ids seeded; `computedVia` visible) |
+| PG-only runtime paths never executed | ✅ CLOSED (54/54 on real PG + CI workflow) |
+| Direct-to-main hygiene (P2/P3) | 📝 RECORDED (process_notes.md) + CI gate; GitHub protection needs owner admin |
+| N1 production_unit | ✅ CLOSED (accepted into contract, formalized) |
+| K1 wrapper | ✅ CLOSED (canonical decision + formal model + P1 coded to it) |
+| placeholder jwt `change-me-in-production` | ✅ CLOSED (rejected everywhere; prod refuses without real secret) |
+| H/Q limbo | ✅ CLOSED (Q wired; H2/H3 → Phase-3 backlog owner P3; Q persistence → P2) |
+| sequencing single-commit pattern | ✅ CLOSED-Verified (timestamped verified artifacts) |
+
+**Three tiers, priority order (post-remediation):**
 
 ### Phase-3 / production blockers
 1. **K1 response shape deviates from the frozen contract** (`assessment` wrapper vs `ImpactAssessment`, 200 vs 202). P1 normalizes defensively, but every other future consumer and the audit record need P3 to either align `engine/api.py` to the contract or formally re-document the wrapper → opened in the POST-AUDIT ADDENDUM; **owner P3**.

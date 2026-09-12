@@ -19,7 +19,7 @@ sys.path.insert(0, str(ROOT))
 
 from sqlalchemy import create_engine  # noqa: E402
 
-from tests.test_sql_source import _seed  # noqa: E402
+from tests.test_sql_source import _seed  # noqa: E402  (seeds all 19 interventions)
 
 
 def main() -> None:

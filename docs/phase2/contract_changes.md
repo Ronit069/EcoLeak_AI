@@ -133,3 +133,19 @@ audit probe of the merged surface (single base URL `http://localhost:8000`):
 
 Consumers notified: P1 (adapted + logged), P3 (owner of `engine/api.py` —
 flagged for confirmation), P4 (N1 owner — flagged).
+
+---
+
+# Phase 2 REMEDIATION DECISIONS (branch `phase2-fixes`, post-audit)
+
+| # | Item | Decision | Contract impact | Verification |
+|---|---|---|---|---|
+| R1 | K1 response shape (BLOCKER 1) | **Wrapper envelope is canonical**: `ScenarioSimulationEnvelope { scenario_id, assessment: ImpactAssessment, interventions, payback_status, payback_reason, over_budget, issues }` @ HTTP 200. Formal model added (`schemas.py`), T1 reserved 202 semantics for job endpoints only | api_contract.md K1 row updated; `contracts/schemas.py` addendum; P1 consumes the canonical shape (`normalizeSimulate` + `computedVia`) | `tests/test_remediation.py::test_k1_*` PASS; live curl with all 18 J2 ids → 200, zero 404 |
+| R2 | N1 additive `production_unit` | **Accepted into the permanent contract** (P1/P2 acting decision). Formalized as `DashboardResponse.production_unit` | api_contract.md N1 row + `schemas.py` `DashboardResponse`; P1 TS `DashboardPayload.production_unit` | `test_remediation.py::test_n1_*` PASS (scope breakdown sums == total) |
+| R3 | K1 intervention id coverage | **(a) chosen**: full 19-entry P4 library seeded into the simulator data source (SQLite test/seed images + PG production seed via `seed_interventions.py`) | none (additive rows) | PG seed = 19; SQL source over PG returns 19; K1 all-18 ids → 200 |
+| R4 | Silent K1 fallback | **Removed/visibilized**: `fetchSimulate` returns `computedVia: 'engine' \| 'local_fallback'`; UI labels "Engine-verified simulation (K1)" vs "Local Module-K math — computed_via=local_fallback"; failed live calls also list `scenario-simulate` in the demo-data banner | none | Playwright: engine-verified notice PASS, no NaN |
+| R5 | PG-only runtime paths | **Executed against real PostgreSQL 16.6**; CI added (`.github/workflows/phase2-ci.yml`, postgres:16 service) | none | backend suite **54/54**, P3 SQL-source on PG totals reconcile, seed smoke asserts 566,360.8 + 19 interventions |
+| R6 | jwt placeholder guard | **Placeholders rejected in ALL environments**; prod-like start without `JWT_SECRET` refuses to start | none (config only) | 4-case verification executed (prod-no-secret raises, placeholder raises even in dev, real secret OK, dev default OK) |
+| R7 | Module Q | **Q1/Q2 wired into merged surface** (in-memory store; frozen error shape (`FEEDBACK_VALIDATION` 422)); SQL persistence → Phase-3 backlog owner P2 | additive endpoints (not in api_contract.md originally — now served; catalogued in `process_notes.md` §4) | Q1 201 / Q2 200 / guard 422 frozen shape |
+| R8 | Module H2/H3 | **Phase-3 backlog, owner P3** (needs anomaly persistence) | none | `process_notes.md` §4 |
+| R9 | Branch protection | Admin-gated — required config documented for repo owner (Ronit069); CI rule added so tests must pass | none | `process_notes.md` §2 + `.github/workflows/phase2-ci.yml` |

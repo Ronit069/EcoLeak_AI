@@ -36,6 +36,7 @@ from app.routers import (
 from engine.api import router as engine_router  # noqa: E402  (path bootstrap above)
 from engine.errors import CarbonPlatformError  # noqa: E402
 from p4.api import router as p4_router  # noqa: E402
+from p4.feedback import FeedbackError  # noqa: E402
 
 
 _registered_carbon_handler = False
@@ -80,6 +81,13 @@ def create_app() -> FastAPI:
             return JSONResponse(
                 status_code=exc.status_code,
                 content=error_payload(exc.error_code, exc.message, exc.severity, exc.details),
+            )
+
+        @app.exception_handler(FeedbackError)
+        async def _feedback_domain(_: Request, exc: FeedbackError) -> JSONResponse:
+            return JSONResponse(
+                status_code=422,
+                content=error_payload("FEEDBACK_VALIDATION", str(exc), "ERROR", {}),
             )
 
         _registered_carbon_handler = True
