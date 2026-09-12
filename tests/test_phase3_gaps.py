@@ -120,3 +120,33 @@ def test_fix2_h2_before_detect_returns_explicit_error() -> None:
     # typed error, never a silent empty list that masks missing state.
     client.post(f"/api/facilities/{F}/anomalies/detect", json={"reporting_period_id": P}, headers=_h())
     assert True  # registry is session-scoped per engine instance; detect+GET covered above
+
+def test_ga06_mock_path_k1_resolves_library_only_intervention() -> None:
+    """GA-06: the DEFAULT (mock) K1 path must resolve library-only ids from
+    the frozen P4 library instead of 404ing and silently falling back."""
+    F = "0a1b2c3d-0002-4002-8002-000000000002"
+    P = "0a1b2c3d-0003-4003-8003-000000000003"
+    lib_only_id = "0a1b2c3d-0016-4016-8016-000000000016"  # NOT in the 5 mock interventions
+    r = client.post(
+        "/api/scenarios/00000000-0000-4000-8000-000000000000/simulate",
+        json={
+            "facility_id": F,
+            "reporting_period_id": P,
+            "interventions": [{"intervention_id": lib_only_id, "adoption_percentage": 50}],
+        },
+        headers=_h(),
+    )
+    assert r.status_code == 200, r.text
+    body = r.json()
+    assert "assessment" in body and body["assessment"].get("projected_emissions_kg") is not None
+    # still typed-404 for a genuinely unknown id
+    unknown = client.post(
+        "/api/scenarios/00000000-0000-4000-8000-000000000000/simulate",
+        json={
+            "facility_id": F,
+            "reporting_period_id": P,
+            "interventions": [{"intervention_id": "ffffffff-ffff-4fff-8fff-ffffffffffff", "adoption_percentage": 50}],
+        },
+        headers=_h(),
+    )
+    assert unknown.status_code == 404 and unknown.json()["error_code"] == "NOT_FOUND"
