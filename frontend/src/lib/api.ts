@@ -368,6 +368,30 @@ export interface SimulateResult {
   payback_years: number | null
 }
 
+/**
+ * Defensive normalization of K1 responses. The frozen contract says the
+ * response IS an ImpactAssessment; the live engine router wraps it as
+ * { assessment: ImpactAssessment, interventions, over_budget, issues, ... }.
+ * Unwrap (and prefer flat) so the UI works with either shape. Deviation from
+ * the contracted shape is logged in docs/phase2/contract_changes.md §P1.
+ */
+function normalizeSimulate(raw: Record<string, unknown>): SimulateResult | null {
+  const nested = raw['assessment'] as Record<string, unknown> | undefined
+  const pick = (k: string): unknown => raw[k] ?? (nested ? nested[k] : undefined)
+  if (pick('projected_emissions_kg') === undefined && pick('baseline_emissions_kg') === undefined) {
+    return null
+  }
+  return {
+    baseline_emissions_kg: Number(pick('baseline_emissions_kg')),
+    projected_emissions_kg: Number(pick('projected_emissions_kg')),
+    total_co2_saving_kg: pick('total_co2_saving_kg') == null ? null : Number(pick('total_co2_saving_kg')),
+    reduction_percent: pick('reduction_percent') == null ? null : Number(pick('reduction_percent')),
+    total_capex: Number(pick('total_capex') ?? 0),
+    annual_saving: pick('annual_saving') == null ? null : Number(pick('annual_saving')),
+    payback_years: pick('payback_years') == null ? null : Number(pick('payback_years')),
+  }
+}
+
 export async function fetchSimulate(
   facilityId: string,
   periodId: string,
@@ -380,7 +404,7 @@ export async function fetchSimulate(
   return liveOrMock<SimulateResult | null>(
     'scenario-simulate',
     async () => {
-      const raw = await postJson<SimulateResult>(
+      const raw = await postJson<Record<string, unknown>>(
         `${API_URL}/api/scenarios/00000000-0000-4000-8000-000000000000/simulate`,
         {
           facility_id: facilityId,
@@ -393,7 +417,7 @@ export async function fetchSimulate(
           ...(budgetLimit !== undefined ? { budget_limit: String(budgetLimit) } : {}),
         },
       )
-      return raw
+      return normalizeSimulate(raw)
     },
     async () => null,
   )
