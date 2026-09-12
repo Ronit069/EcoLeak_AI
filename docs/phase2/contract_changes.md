@@ -96,3 +96,24 @@ dashboard and P2's report consumer require no changes.
 `docs/phase2/p4_integration_log.md` §11 (seed Scope-3 factors; resolve the DEFRA
 diesel blend/mineral tie or mark a preferred factor). P1 — no change; live-mode
 severity labels differ from the frozen mock (pre-existing Phase 1 B3 decision).
+
+---
+
+# P1 — Phase 2 (branch `phase2-p1-integration`)
+
+**Status: NO frozen contract changes.** P1 does not change `contracts/schemas.py`
+or any request/response shape in `contracts/api_contract.md`. All swaps consume
+existing endpoints (A5/A9/B2/C3/G2/J2/M1/N1/N2/K1) as documented.
+
+## Additive / observational entries (no existing shape altered)
+
+| Area | Change | Old shape | New shape | Reason |
+|---|---|---|---|---|
+| Dataset bootstrap | new `GET /api/context` consumed by P1 (endpoint added during Phase 1 merged-API work, `engine/api.py`) | mock JSON read | `{organization, facilities[], reporting_periods[]}` | P1 needs org/facility/period rows in live mode without P2 PG routers; additive, ignore-safe |
+| Scenario CRUD | `O1–O7` (create/edit/delete scenario + interventions) are **not served** by the currently merged surface (no `scenarios` router mounted) | — | — | P1 Phase 2 covers `K1` simulate only; scenario CRUD stays client-side state. Flagged to P2/P4: merge decision in progress |
+| Fallback config | `VITE_USE_MOCK_DATA` / localStorage `ecoleak.useMockData` runtime gate in `frontend/src/lib/api.ts` | `VITE_USE_MOCKS` build-time only | runtime `auto/mock/live` + per-group fallback registry + demo banner | shared Phase 2 `USE_MOCK_DATA` rule applied to the browser client |
+
+**Notifications:** P2 — `GET /api/facilities/{id}/processes`, `.../activity`, and A2/A5/A9
+require a live PostgreSQL; when P2's DB is down those groups fall back to mocks in
+P1 (by design, §2 of the P1 log). P3/P4 — no change required; J2/N1/N2/G2 shapes
+consumed as-is, verified by the running P4 router outputs.
