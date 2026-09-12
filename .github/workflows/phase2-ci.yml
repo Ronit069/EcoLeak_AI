@@ -1,4 +1,4 @@
-name: EcoLeak CI
+﻿name: EcoLeak CI
 
 on:
   push:
@@ -34,10 +34,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install backend + root requirements (pinned by requirements.lock)
+      - name: Install pinned environment (requirements.lock)
         run: |
-          python -m pip install -q --upgrade pip pip-tools
-          python -m pip install -q -r requirements.txt -r backend/requirements.txt -c requirements.lock
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -r requirements.lock
 
       - name: Backend PG-gated suite (contract parity, schema constraints, ingestion volume, audit, double counting, Module P real)
         working-directory: backend
@@ -77,10 +77,12 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install root deps (repo root) + playwright chromium (frontend/)
+      - name: Install python deps (repo root)
         run: |
           python -m pip install -q --upgrade pip
-          python -m pip install -q -r requirements.txt -r backend/requirements.txt -c requirements.lock
+          python -m pip install -q -r requirements.lock
+      - name: Install node deps + playwright chromium (frontend/)
+        run: |
           npm ci --no-audit --no-fund
           npx playwright-core install chromium --only-shell
         working-directory: frontend
@@ -112,7 +114,7 @@ jobs:
         run: |
           # fixed: MUST pass
           node tests/k1_strict.mjs http://localhost:8000
-          # broken: MUST fail (red) — invert to make CI red/green visible
+          # broken: MUST fail (red) â€” invert to make CI red/green visible
           if node tests/k1_strict.mjs http://localhost:8001 2>/dev/null; then
             echo "FAIL: broken backend must NOT pass strict checks"; exit 1
           fi
@@ -146,7 +148,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install -q --upgrade pip
-          python -m pip install -q -r requirements.txt -r backend/requirements.txt -c requirements.lock
+          python -m pip install -q -r requirements.lock
       - name: Alembic upgrade + full 19-intervention seed + engine-over-PG smoke
         working-directory: backend
         run: |
@@ -177,7 +179,7 @@ jobs:
       - name: Install
         run: |
           python -m pip install -q --upgrade pip
-          python -m pip install -q -r requirements.txt -r backend/requirements.txt -c requirements.lock
+          python -m pip install -q -r requirements.lock
       - name: Backend ruff gate
         working-directory: backend
         run: python -m ruff check app
