@@ -209,14 +209,45 @@ export async function fetchDataset(): Promise<GroupResult<MockDataset>> {
   )
 }
 
+const FACILITY_KEY = 'ecoleak.facilityId'
+const PERIOD_KEY = 'ecoleak.periodId'
+
+/** P1-09: persist a facility/period selection (applied on next bootstrap). */
+export function setFacilitySelection(facilityId: string, periodId?: string): void {
+  try {
+    localStorage.setItem(FACILITY_KEY, facilityId)
+    if (periodId) localStorage.setItem(PERIOD_KEY, periodId)
+  } catch { /* private mode */ }
+}
+
+export function getFacilitySelection(): string | null {
+  try { return localStorage.getItem(FACILITY_KEY) } catch { return null }
+}
+
+export async function fetchFacilityPeriods(facilityId: string): Promise<Array<{ id: string }>> {
+  return getJson<Array<{ id: string }>>(`${API_URL}/api/facilities/${facilityId}/reporting-periods`)
+}
+
 export async function fetchBootstrapIds(): Promise<BootstrapIds> {
   const { data, source } = await fetchDataset()
   if (source === 'live' && data.facilities.length > 0) {
+    const chosen = getFacilitySelection()
+    const facility = (chosen && data.facilities.find(f => f.id === chosen)) || data.facilities[0]
+    let periodId = data.reporting_periods.find(p => p.facility_id === facility.id)?.id
+    if (!periodId) {
+      try {
+        const periods = await fetchFacilityPeriods(facility.id)
+        periodId = periods[0]?.id
+      } catch { /* fall through to demo period */ }
+    }
+    try {
+      const storedPeriod = localStorage.getItem(PERIOD_KEY)
+      if (storedPeriod) periodId = storedPeriod
+    } catch { /* private mode */ }
     return {
       organization_id: data.organization?.id ?? DEMO_IDS.organization_id,
-      facility_id: data.facilities[0].id,
-      reporting_period_id:
-        data.reporting_periods[0]?.id ?? DEMO_IDS.reporting_period_id,
+      facility_id: facility.id,
+      reporting_period_id: periodId ?? DEMO_IDS.reporting_period_id,
     }
   }
   return DEMO_IDS
@@ -292,6 +323,7 @@ export interface DashboardPayload {
   potential_annual_saving: number
   last_calculated_at: string
   empty_state: boolean
+  unresolved_count?: number  // P1-05 additive: rows without a matching factor
 }
 
 export async function fetchDashboard(
@@ -366,6 +398,60 @@ export async function fetchExplanation(
       `${API_URL}/api/recommendations/${recommendationId}/explanation`),
     async () => null,
   )
+}
+
+// ---------------------------------------------------------------------------
+// Module P — reports (P1-06)
+// ---------------------------------------------------------------------------
+
+export interface ReportReceipt {
+  report_id: string
+  status: string
+  version: number
+  generated_at: string
+  report_hash: string
+}
+
+export interface ReportDetail extends ReportReceipt {
+  payload: Record<string, unknown>
+}
+
+export async function fetchReports(
+  facilityId: string,
+  periodId: string,
+): Promise<ReportReceipt[]> {
+  return getJson<ReportReceipt[]>(
+    `${API_URL}/api/reports?facility_id=${facilityId}&reporting_period_id=${periodId}`)
+}
+
+export async function generateReport(
+  facilityId: string,
+  periodId: string,
+  templateVersion = 'v1',
+  includeScope3 = true,
+): Promise<ReportReceipt> {
+  return postJson<ReportReceipt>(
+    `${API_URL}/api/facilities/${facilityId}/reporting-periods/${periodId}/reports`,
+    { template_version: templateVersion, include_scope3: includeScope3 },
+  )
+}
+
+export async function fetchReport(reportId: string): Promise<ReportDetail> {
+  return getJson<ReportDetail>(`${API_URL}/api/reports/${reportId}`)
+}
+
+export async function downloadReportExport(reportId: string, format: 'json' | 'csv'): Promise<void> {
+  const headers: Record<string, string> = {}
+  if (API_TOKEN) headers.Authorization = `Bearer ${API_TOKEN}`
+  const res = await fetch(`${API_URL}/api/reports/${reportId}/export?format=${format}`, { headers })
+  if (!res.ok) throw new ApiError(res.status, `Export failed: ${res.status} for report ${reportId}`)
+  const blob = await res.blob()
+  const objectUrl = URL.createObjectURL(blob)
+  const anchor = document.createElement('a')
+  anchor.href = objectUrl
+  anchor.download = `report-${reportId}.${format}`
+  anchor.click()
+  URL.revokeObjectURL(objectUrl)
 }
 
 

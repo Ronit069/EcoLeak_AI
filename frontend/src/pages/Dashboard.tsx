@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import {
   fetchActivities, fetchBootstrapIds, fetchDashboard, fetchDataset,
   fetchHotspots, fetchProcesses, fetchRecommendations, resetFallbacks,
+  setFacilitySelection,
   subscribeFallbacks, subscribeMockMode, DEMO_IDS, type BootstrapIds,
   type DashboardPayload, type GroupResult, type Source,
 } from '../lib/api'
@@ -121,7 +122,7 @@ export function Loading() {
 }
 
 export function DashboardPage() {
-  const { dataset, hotspots, recs, dashboard, error } = usePhase1Data()
+  const { dataset, hotspots, recs, dashboard, error, sources, ids } = usePhase1Data()
   if (error) return <div className="notice"><b>Failed to load.</b> {error} — using cached/demo data where available.</div>
   if (!hotspots || !recs || !dataset) return <Loading />
 
@@ -141,13 +142,22 @@ export function DashboardPage() {
     budget_limit: derived.budget_limit,
     total_capex: derived.total_capex,
     empty_state: dashboard?.empty_state ?? derived.empty_state,
+    unresolved_count: dashboard?.unresolved_count ?? 0,
   }
-  const facility = dataset.facilities[0]
-  const period = dataset.reporting_periods[0]
+  const facility = dataset.facilities.find(f => f.id === ids.facility_id) ?? dataset.facilities[0]
+  const period = dataset.reporting_periods.find(p => p.id === ids.reporting_period_id) ?? dataset.reporting_periods[0]
   const scopeLabel =
     hotspots.scope_boundary?.length > 0
       ? hotspots.scope_boundary.join(' + ').replace(/_/g, ' ')
       : 'Scope 1 + 2 (default boundary)'
+  // P1-01: the N1 total includes Scope 3; hotspot shares are relative to the
+  // operational (Scope 1+2) boundary. Keep both visible so neither is misread.
+  const operationalKg = hotspots.total_emissions_kgco2e
+  const recsAreMock = sources.recommendations === 'mock'
+  const reductionPct =
+    dash.total_kgco2e > 0
+      ? `${(((dash.potential_reduction_kgco2e ?? 0) / dash.total_kgco2e) * 100).toFixed(1)}% of baseline`
+      : 'baseline unavailable'
 
   return (
     <>
@@ -155,17 +165,35 @@ export function DashboardPage() {
         <div>
           <h1>Carbon leak bench</h1>
           <p>{facility?.name ?? 'Facility'} · {period?.start_date ?? '—'} → {period?.end_date ?? '—'} · {scopeLabel}</p>
+          {dataset.facilities.length > 1 && (
+            <select
+              aria-label="Facility"
+              value={facility?.id ?? ''}
+              onChange={e => { setFacilitySelection(e.target.value); window.location.reload() }}
+              style={{ marginTop: 6, fontSize: '.82rem', maxWidth: 360 }}
+            >
+              {dataset.facilities.map(f => <option key={f.id} value={f.id}>{f.name}</option>)}
+            </select>
+          )}
         </div>
         <span className="provenance">
-          {dashboard ? 'N1 live' : 'N1 derived'} · total {fmtKg(dash.total_kgco2e)} · quality {dash.data_quality_score ?? '—'}/100
+          {dashboard ? 'N1 live' : 'N1 derived'} · total {fmtKg(dash.total_kgco2e)} · hotspot data quality {dash.data_quality_score ?? '—'}/100
         </span>
       </div>
 
+      {dash.unresolved_count > 0 && (
+        <div className="notice" role="status">
+          <b>{dash.unresolved_count} unresolved activit{dash.unresolved_count === 1 ? 'y' : 'ies'}.</b> No
+          emission factor matched, so {dash.unresolved_count === 1 ? 'it is' : 'they are'} excluded from every
+          total below — provenance is incomplete for these rows.
+        </div>
+      )}
+
       <div className="instrument-strip panel" role="region" aria-label="Key instruments" style={{ marginBottom: 18 }}>
         <div className="gauge">
-          <div className="gauge-label">TOTAL EMISSIONS</div>
+          <div className="gauge-label">TOTAL EMISSIONS (ALL SCOPES)</div>
           <div className="gauge-value">{fmtTonnes(dash.total_kgco2e)}</div>
-          <div className="gauge-sub">{fmtKg(dash.total_kgco2e)} · {dash.empty_state ? 'no data yet' : 'computed'}</div>
+          <div className="gauge-sub">{fmtKg(dash.total_kgco2e)} · Scope 1+2 {fmtKg(operationalKg)} · {dash.empty_state ? 'no data yet' : 'computed'}</div>
         </div>
         <div className="gauge">
           <div className="gauge-label">CARBON INTENSITY</div>
@@ -179,7 +207,7 @@ export function DashboardPage() {
           <div className="gauge-value" style={{ fontSize: '1.05rem' }}>
             #{dash.largest_hotspot?.rank ?? '—'} {dash.largest_hotspot?.process_name ?? 'none yet'}
           </div>
-          <div className="gauge-sub">{fmtPct(dash.largest_hotspot?.contribution_percent)} of total · {fmtKg(dash.largest_hotspot?.emissions_kgco2e)}</div>
+          <div className="gauge-sub">{fmtPct(dash.largest_hotspot?.contribution_percent)} of Scope 1+2 · {fmtKg(dash.largest_hotspot?.emissions_kgco2e)}</div>
         </div>
         <div className="gauge">
           <div className="gauge-label">CIRCULARITY SCORE</div>
@@ -191,12 +219,12 @@ export function DashboardPage() {
         <div className="gauge">
           <div className="gauge-label">POTENTIAL REDUCTION</div>
           <div className="gauge-value">{fmtTonnes(dash.potential_reduction_kgco2e)}</div>
-          <div className="gauge-sub">{fmtPct((dash.potential_reduction_kgco2e / dash.total_kgco2e) * 100)} of baseline · across ranked recs</div>
+          <div className="gauge-sub">{reductionPct} · across ranked recs{recsAreMock ? ' (demo recs)' : ''}</div>
         </div>
         <div className="gauge">
           <div className="gauge-label">POTENTIAL SAVING</div>
           <div className="gauge-value">{fmtINR(dash.potential_annual_saving)}</div>
-          <div className="gauge-sub">Budget {fmtINR(dash.budget_limit)} · CAPEX {fmtINR(dash.total_capex)}</div>
+          <div className="gauge-sub">Budget {fmtINR(dash.budget_limit)} · CAPEX {fmtINR(dash.total_capex)}{recsAreMock ? ' · demo recs' : ''}</div>
         </div>
       </div>
 
@@ -255,7 +283,8 @@ export function DashboardPage() {
           {recs.recommendations.slice(0, 3).map(r => <RecommendationPlate key={r.id} rec={r} />)}
           <div className="notice">
             Ranked by weighted score (0.30 carbon + 0.25 financial + 0.15 feasibility + 0.15 circularity +
-            0.10 speed + 0.05 confidence) — not carbon alone. Live J2 ranks the full library; the mock showed 5.
+            0.10 speed + 0.05 confidence) — not carbon alone. Live J2 ranks the full 19-entry library.
+            {recsAreMock ? ' Showing demo recommendations (live J2 unavailable).' : ''}
           </div>
         </aside>
       </div>

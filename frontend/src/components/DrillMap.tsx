@@ -23,7 +23,7 @@ export function DrillMap({
   const [level, setLevel] = useState<Level>('facility')
   const [processId, setProcessId] = useState<string | null>(null)
   const selProcessId = processId ?? null
-  const facility = dataset.facilities[0]
+  const facility = dataset.facilities.find(f => f.id === hotspots.facility_id) ?? dataset.facilities[0]
   const period = dataset.reporting_periods[0]
   const byProcess = new Map((hotspots.hotspots ?? []).map(h => [h.process_id, h]))
   const useSel = (id: string | null) => setProcessId(id)

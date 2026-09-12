@@ -8,7 +8,7 @@
     "reporting_period_id": "0a1b2c3d-0003-4003-8003-000000000003",
     "hotspot_source": {
       "total_emissions_kgco2e": 566360.8,
-      "data_quality_score": 89.33,
+      "data_quality_score": 84.95,
       "severity_by_process": {
         "Boiler": "HIGH",
         "Dyeing": "MODERATE",
@@ -46,13 +46,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 50.9,
         "implementation_speed_score": 92.0,
-        "confidence_score": 85.6,
-        "final_score": 71.86,
+        "confidence_score": 82.97,
+        "final_score": 71.73,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-STEAMTRAP-006",
         "intervention_title": "Steam trap survey, replacement and condensate recovery",
-        "explanation": "Ranked #1 with a final score of 71.86/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 17,903 kgCO2e/year (expected reduction range 5.0-8.0% of the targeted hotspot). Estimated CAPEX INR 275,000 (range 150,000-400,000), estimated annual saving INR 484,450, payback 0.57 years. Component scores: carbon 35.8, financial 100.0, feasibility 100.0, circularity 50.9, speed 92.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Steam system efficiency guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #1 with a final score of 71.73/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 17,903 kgCO2e/year (expected reduction range 5.0-8.0% of the targeted hotspot). Estimated CAPEX INR 275,000 (range 150,000-400,000), estimated annual saving INR 484,450, payback 0.57 years. Component scores: carbon 35.8, financial 100.0, feasibility 100.0, circularity 50.9, speed 92.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Steam system efficiency guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "07377492-c07a-51b0-a066-1c2077a18b5c",
           "recommendation_id": "5f9fead0-480b-55db-be62-ce191cbef062",
@@ -80,9 +80,11 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "17903.456000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -97,13 +99,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 20.0,
         "implementation_speed_score": 96.0,
-        "confidence_score": 85.6,
-        "final_score": 70.17,
+        "confidence_score": 82.97,
+        "final_score": 70.04,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-CAIR-011",
         "intervention_title": "Compressed-air leak management and pressure optimization",
-        "explanation": "Ranked #2 with a final score of 70.17/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 22,152 kgCO2e/year (expected reduction range 2.0-4.0% of the targeted hotspot). Estimated CAPEX INR 200,000 (range 100,000-300,000), estimated annual saving INR 285,600, payback 0.70 years. Component scores: carbon 44.3, financial 100.0, feasibility 100.0, circularity 20.0, speed 96.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: Compressed-air efficiency guides (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #2 with a final score of 70.04/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 22,152 kgCO2e/year (expected reduction range 2.0-4.0% of the targeted hotspot). Estimated CAPEX INR 200,000 (range 100,000-300,000), estimated annual saving INR 285,600, payback 0.70 years. Component scores: carbon 44.3, financial 100.0, feasibility 100.0, circularity 20.0, speed 96.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: Compressed-air efficiency guides (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "50d7a85e-b0da-5186-b381-9bbd21afc209",
           "recommendation_id": "55a9a984-a4ae-5268-bff7-c35278c0c873",
@@ -131,9 +133,11 @@
             "opex_change_pct_mid": "-0.5",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "22152.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -148,13 +152,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 20.0,
         "implementation_speed_score": 100.0,
-        "confidence_score": 85.6,
-        "final_score": 67.44,
+        "confidence_score": 82.97,
+        "final_score": 67.31,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-NOCAPEX-019",
         "intervention_title": "No-CAPEX operational optimization program",
-        "explanation": "Ranked #3 with a final score of 67.44/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 16,938 kgCO2e/year (expected reduction range 1.0-3.0% of the targeted hotspot). Estimated CAPEX INR 0 (range 0-0), estimated annual saving INR 283,050, payback 0.00 years. Component scores: carbon 33.9, financial 100.0, feasibility 100.0, circularity 20.0, speed 100.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: ISO 50001 operational controls (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #3 with a final score of 67.31/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 16,938 kgCO2e/year (expected reduction range 1.0-3.0% of the targeted hotspot). Estimated CAPEX INR 0 (range 0-0), estimated annual saving INR 283,050, payback 0.00 years. Component scores: carbon 33.9, financial 100.0, feasibility 100.0, circularity 20.0, speed 100.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: ISO 50001 operational controls (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "e69bf23b-d3b3-5262-88c7-31690ed26ccd",
           "recommendation_id": "b2d67272-c5a8-583d-adcd-721935c41660",
@@ -183,9 +187,11 @@
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
             "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "16937.796000",
             "payback_note": "immediate payback (zero CAPEX)"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -200,13 +206,13 @@
         "feasibility_score": 80.0,
         "circularity_score": 30.0,
         "implementation_speed_score": 60.0,
-        "confidence_score": 85.6,
-        "final_score": 65.98,
+        "confidence_score": 82.97,
+        "final_score": 65.85,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-WHR-001",
         "intervention_title": "Boiler waste-heat recovery (flue-gas economizer)",
-        "explanation": "Ranked #4 with a final score of 65.98/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 27,974 kgCO2e/year (expected reduction range 12.0-18.0% of the targeted hotspot). Estimated CAPEX INR 1,600,000 (range 1,200,000-2,000,000), estimated annual saving INR 830,025, payback 1.93 years. Component scores: carbon 55.9, financial 89.7, feasibility 80.0, circularity 30.0, speed 60.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: IEA industrial heat-recovery guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #4 with a final score of 65.85/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 27,974 kgCO2e/year (expected reduction range 12.0-18.0% of the targeted hotspot). Estimated CAPEX INR 1,600,000 (range 1,200,000-2,000,000), estimated annual saving INR 830,025, payback 1.93 years. Component scores: carbon 55.9, financial 89.7, feasibility 80.0, circularity 30.0, speed 60.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: IEA industrial heat-recovery guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "71fdd646-4adf-5c1a-96e6-d1437fd02687",
           "recommendation_id": "2bbc5b7a-7e83-5a49-91bc-1dcf4af422e5",
@@ -234,9 +240,11 @@
             "opex_change_pct_mid": "-3.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "27974.150000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -251,13 +259,13 @@
         "feasibility_score": 80.0,
         "circularity_score": 50.9,
         "implementation_speed_score": 84.0,
-        "confidence_score": 85.6,
-        "final_score": 63.17,
+        "confidence_score": 82.97,
+        "final_score": 63.04,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-CONDENSATE-009",
         "intervention_title": "Condensate polishing and return maximization",
-        "explanation": "Ranked #5 with a final score of 63.17/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 11,190 kgCO2e/year (expected reduction range 3.0-5.0% of the targeted hotspot). Estimated CAPEX INR 425,000 (range 250,000-600,000), estimated annual saving INR 323,800, payback 1.31 years. Component scores: carbon 22.4, financial 96.6, feasibility 80.0, circularity 50.9, speed 84.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Boiler plant efficiency guides (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #5 with a final score of 63.04/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 11,190 kgCO2e/year (expected reduction range 3.0-5.0% of the targeted hotspot). Estimated CAPEX INR 425,000 (range 250,000-600,000), estimated annual saving INR 323,800, payback 1.31 years. Component scores: carbon 22.4, financial 96.6, feasibility 80.0, circularity 50.9, speed 84.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Boiler plant efficiency guides (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "6f4707e1-3638-57f1-abd5-c09804fb7ca4",
           "recommendation_id": "9b0cd04d-ff26-5a7c-91c1-48386b2cd944",
@@ -285,9 +293,11 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "11189.660000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -302,13 +312,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 56.0,
         "implementation_speed_score": 92.0,
-        "confidence_score": 85.6,
-        "final_score": 63.07,
+        "confidence_score": 82.97,
+        "final_score": 62.94,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-WASTESEG-015",
         "intervention_title": "Waste segregation at source with EPR-linked recycling contracts",
-        "explanation": "Ranked #6 with a final score of 63.07/100 for hotspot #4 (Finishing, severity LOW, 10.03% of operational emissions, 56,800 kgCO2e). Expected reduction of 2.0-5.0% of the hotspot's emissions, i.e. 1,988 kgCO2e/year. Estimated CAPEX INR 140,000 (range 80,000-200,000), estimated annual saving INR 192,000, payback 0.73 years. Component scores: carbon 4.0, financial 100.0, feasibility 100.0, circularity 56.0, speed 92.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 14.4, waste ratio not estimated, improvement potential 45.0 (out of 100). Evidence source: EPR and waste segregation guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #6 with a final score of 62.94/100 for hotspot #4 (Finishing, severity LOW, 10.03% of operational emissions, 56,800 kgCO2e). Expected reduction of 2.0-5.0% of the hotspot's emissions, i.e. 1,988 kgCO2e/year. Estimated CAPEX INR 140,000 (range 80,000-200,000), estimated annual saving INR 192,000, payback 0.73 years. Component scores: carbon 4.0, financial 100.0, feasibility 100.0, circularity 56.0, speed 92.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 14.4, waste ratio not estimated, improvement potential 45.0 (out of 100). Evidence source: EPR and waste segregation guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "0893bf59-8a5d-54ad-b025-40079e94c7f2",
           "recommendation_id": "1f693eb1-fc69-5f4f-abf3-b4e5df78fa58",
@@ -336,9 +346,11 @@
             "opex_change_pct_mid": "0.0",
             "co2_saving_basis": "midpoint of expected CO2 reduction range applied to targeted hotspot emissions (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "1988.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -353,13 +365,13 @@
         "feasibility_score": 80.0,
         "circularity_score": 20.0,
         "implementation_speed_score": 72.0,
-        "confidence_score": 85.6,
-        "final_score": 62.01,
+        "confidence_score": 82.97,
+        "final_score": 61.88,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-SOLAR-002",
         "intervention_title": "Rooftop solar PV for wet-process loads",
-        "explanation": "Ranked #7 with a final score of 62.01/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 51,120 kgCO2e/year (expected reduction range 8.0-14.0% of the targeted hotspot). Estimated CAPEX INR 4,250,000 (range 3,500,000-5,000,000), estimated annual saving INR 530,400, payback 8.01 years. Component scores: carbon 100.0, financial 22.1, feasibility 80.0, circularity 20.0, speed 72.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: CEA / MNRE solar generation estimates (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100. Mutually exclusive with: INT-SOLAR-THERMAL-018 (apply sequentially in scenario simulation).",
+        "explanation": "Ranked #7 with a final score of 61.88/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 51,120 kgCO2e/year (expected reduction range 8.0-14.0% of the targeted hotspot). Estimated CAPEX INR 4,250,000 (range 3,500,000-5,000,000), estimated annual saving INR 530,400, payback 8.01 years. Component scores: carbon 100.0, financial 22.1, feasibility 80.0, circularity 20.0, speed 72.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: CEA / MNRE solar generation estimates (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100. Mutually exclusive with: INT-SOLAR-THERMAL-018 (apply sequentially in scenario simulation).",
         "impact": {
           "id": "6d292d90-f244-534f-9e19-f039bf87293e",
           "recommendation_id": "07acd08c-2dd0-5b59-80a4-4399fc79b6f0",
@@ -387,9 +399,11 @@
             "opex_change_pct_mid": "2.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "51120.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -404,13 +418,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 48.0,
         "implementation_speed_score": 92.0,
-        "confidence_score": 85.6,
-        "final_score": 61.02,
+        "confidence_score": 82.97,
+        "final_score": 60.89,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-FILM-017",
         "intervention_title": "Packaging film downgauging and stretch-wrap optimization",
-        "explanation": "Ranked #8 with a final score of 61.02/100 for hotspot #5 (Packaging, severity LOW, 5.01% of operational emissions, 28,400 kgCO2e). Expected reduction of 1.0-3.0% of the hotspot's emissions, i.e. 568 kgCO2e/year. Estimated CAPEX INR 175,000 (range 100,000-250,000), estimated annual saving INR 793,800, payback 0.22 years. Component scores: carbon 1.1, financial 100.0, feasibility 100.0, circularity 48.0, speed 92.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 0.0, waste ratio not estimated, improvement potential 20.0 (out of 100). Evidence source: Packaging optimization guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #8 with a final score of 60.89/100 for hotspot #5 (Packaging, severity LOW, 5.01% of operational emissions, 28,400 kgCO2e). Expected reduction of 1.0-3.0% of the hotspot's emissions, i.e. 568 kgCO2e/year. Estimated CAPEX INR 175,000 (range 100,000-250,000), estimated annual saving INR 793,800, payback 0.22 years. Component scores: carbon 1.1, financial 100.0, feasibility 100.0, circularity 48.0, speed 92.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 0.0, waste ratio not estimated, improvement potential 20.0 (out of 100). Evidence source: Packaging optimization guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "7a4adffc-26d0-5791-b5fd-6fb01171ac93",
           "recommendation_id": "216a528e-fb44-54a0-9be5-f9807085421e",
@@ -438,9 +452,11 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "midpoint of expected CO2 reduction range applied to targeted hotspot emissions (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "568.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -455,13 +471,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 51.0,
         "implementation_speed_score": 84.0,
-        "confidence_score": 85.6,
-        "final_score": 60.84,
+        "confidence_score": 82.97,
+        "final_score": 60.71,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-PKG-005",
         "intervention_title": "Reusable crates and recycled-LDPE packaging",
-        "explanation": "Ranked #9 with a final score of 60.84/100 for hotspot #5 (Packaging, severity LOW, 5.01% of operational emissions, 28,400 kgCO2e). Expected reduction of 2.0-4.0% of the hotspot's emissions, i.e. 852 kgCO2e/year. Estimated CAPEX INR 425,000 (range 250,000-600,000), estimated annual saving INR 1,020,600, payback 0.42 years. Component scores: carbon 1.7, financial 100.0, feasibility 100.0, circularity 51.0, speed 84.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 0.0, waste ratio not estimated, improvement potential 20.0 (out of 100). Evidence source: Extended producer responsibility guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #9 with a final score of 60.71/100 for hotspot #5 (Packaging, severity LOW, 5.01% of operational emissions, 28,400 kgCO2e). Expected reduction of 2.0-4.0% of the hotspot's emissions, i.e. 852 kgCO2e/year. Estimated CAPEX INR 425,000 (range 250,000-600,000), estimated annual saving INR 1,020,600, payback 0.42 years. Component scores: carbon 1.7, financial 100.0, feasibility 100.0, circularity 51.0, speed 84.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 0.0, waste ratio not estimated, improvement potential 20.0 (out of 100). Evidence source: Extended producer responsibility guidance (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "8eddcffe-acf2-52c9-8860-a6903bb645b9",
           "recommendation_id": "054eab6d-8787-5c34-bb43-a225dc08d1c7",
@@ -489,9 +505,11 @@
             "opex_change_pct_mid": "0.5",
             "co2_saving_basis": "midpoint of expected CO2 reduction range applied to targeted hotspot emissions (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "852.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -506,13 +524,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 60.0,
         "implementation_speed_score": 80.0,
-        "confidence_score": 85.6,
-        "final_score": 60.78,
+        "confidence_score": 82.97,
+        "final_score": 60.65,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-SCRAP-004",
         "intervention_title": "Textile offcut collection and recycled yarn recovery",
-        "explanation": "Ranked #10 with a final score of 60.78/100 for hotspot #4 (Finishing, severity LOW, 10.03% of operational emissions, 56,800 kgCO2e). Expected reduction of 5.0-9.0% of the hotspot's emissions, i.e. 3,976 kgCO2e/year. Estimated CAPEX INR 500,000 (range 300,000-700,000), estimated annual saving INR 244,800, payback 2.04 years. Component scores: carbon 8.0, financial 88.4, feasibility 100.0, circularity 60.0, speed 80.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 14.4, waste ratio not estimated, improvement potential 45.0 (out of 100). Evidence source: Textile EPR / circular pilot data (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #10 with a final score of 60.65/100 for hotspot #4 (Finishing, severity LOW, 10.03% of operational emissions, 56,800 kgCO2e). Expected reduction of 5.0-9.0% of the hotspot's emissions, i.e. 3,976 kgCO2e/year. Estimated CAPEX INR 500,000 (range 300,000-700,000), estimated annual saving INR 244,800, payback 2.04 years. Component scores: carbon 8.0, financial 88.4, feasibility 100.0, circularity 60.0, speed 80.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 14.4, waste ratio not estimated, improvement potential 45.0 (out of 100). Evidence source: Textile EPR / circular pilot data (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "6ce74e55-9cea-5e99-bf6f-84217f10928c",
           "recommendation_id": "e0669d0d-482c-5011-9509-2f35b4dd9045",
@@ -540,9 +558,11 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "midpoint of expected CO2 reduction range applied to targeted hotspot emissions (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "3976.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -557,13 +577,13 @@
         "feasibility_score": 70.0,
         "circularity_score": 49.0,
         "implementation_speed_score": 84.0,
-        "confidence_score": 85.6,
-        "final_score": 60.34,
+        "confidence_score": 82.97,
+        "final_score": 60.21,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-LIQUOR-012",
         "intervention_title": "Low liquor ratio and right-first-time dyeing process optimization",
-        "explanation": "Ranked #11 with a final score of 60.34/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 8,200 kgCO2e/year (expected reduction range 3.0-6.0% of the targeted hotspot). Estimated CAPEX INR 300,000 (range 150,000-450,000), estimated annual saving INR 288,225, payback 1.04 years. Component scores: carbon 16.4, financial 99.6, feasibility 70.0, circularity 49.0, speed 84.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: Right-first-time dyeing case studies (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #11 with a final score of 60.21/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 8,200 kgCO2e/year (expected reduction range 3.0-6.0% of the targeted hotspot). Estimated CAPEX INR 300,000 (range 150,000-450,000), estimated annual saving INR 288,225, payback 1.04 years. Component scores: carbon 16.4, financial 99.6, feasibility 70.0, circularity 49.0, speed 84.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: Right-first-time dyeing case studies (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "91624649-7f8a-537b-a5bb-c7d17a4cb2ce",
           "recommendation_id": "2a977953-f046-5c93-8e7d-a861d366f6ca",
@@ -591,9 +611,11 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "8200.500000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -608,13 +630,13 @@
         "feasibility_score": 100.0,
         "circularity_score": 20.0,
         "implementation_speed_score": 96.0,
-        "confidence_score": 85.6,
-        "final_score": 60.28,
+        "confidence_score": 82.97,
+        "final_score": 60.15,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-LED-008",
         "intervention_title": "LED lighting retrofit across production halls",
-        "explanation": "Ranked #12 with a final score of 60.28/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 13,632 kgCO2e/year (expected reduction range 2.0-4.0% of the targeted hotspot). Estimated CAPEX INR 500,000 (range 300,000-700,000), estimated annual saving INR 183,600, payback 2.72 years. Component scores: carbon 27.3, financial 80.9, feasibility 100.0, circularity 20.0, speed 96.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: BEE lighting programme (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #12 with a final score of 60.15/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 13,632 kgCO2e/year (expected reduction range 2.0-4.0% of the targeted hotspot). Estimated CAPEX INR 500,000 (range 300,000-700,000), estimated annual saving INR 183,600, payback 2.72 years. Component scores: carbon 27.3, financial 80.9, feasibility 100.0, circularity 20.0, speed 96.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: BEE lighting programme (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "14b5816e-1a4b-54d4-8176-7f559be1597c",
           "recommendation_id": "eafcde38-f483-5be7-afdd-51f79a54ccd0",
@@ -642,9 +664,11 @@
             "opex_change_pct_mid": "-0.5",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "13632.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -659,13 +683,13 @@
         "feasibility_score": 80.0,
         "circularity_score": 30.0,
         "implementation_speed_score": 60.0,
-        "confidence_score": 85.6,
-        "final_score": 60.12,
+        "confidence_score": 82.97,
+        "final_score": 59.99,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-SOLAR-THERMAL-018",
         "intervention_title": "Solar thermal collectors for process hot water",
-        "explanation": "Ranked #13 with a final score of 60.12/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 29,093 kgCO2e/year (expected reduction range 8.0-12.0% of the targeted hotspot). Estimated CAPEX INR 2,750,000 (range 2,000,000-3,500,000), estimated annual saving INR 642,600, payback 4.28 years. Component scores: carbon 58.2, financial 63.6, feasibility 80.0, circularity 30.0, speed 60.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Solar thermal for industrial process heat (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100. Mutually exclusive with: INT-SOLAR-002 (apply sequentially in scenario simulation).",
+        "explanation": "Ranked #13 with a final score of 59.99/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Saved resources at versioned emission factors yield 29,093 kgCO2e/year (expected reduction range 8.0-12.0% of the targeted hotspot). Estimated CAPEX INR 2,750,000 (range 2,000,000-3,500,000), estimated annual saving INR 642,600, payback 4.28 years. Component scores: carbon 58.2, financial 63.6, feasibility 80.0, circularity 30.0, speed 60.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Solar thermal for industrial process heat (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100. Mutually exclusive with: INT-SOLAR-002 (apply sequentially in scenario simulation).",
         "impact": {
           "id": "7584bbce-c1a3-51bb-8c20-fd76c3b1f125",
           "recommendation_id": "f9cb73b0-4f98-5615-b87b-d5371ecbfe49",
@@ -693,9 +717,11 @@
             "opex_change_pct_mid": "1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "29093.116000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -710,13 +736,13 @@
         "feasibility_score": 80.0,
         "circularity_score": 20.0,
         "implementation_speed_score": 80.0,
-        "confidence_score": 85.6,
-        "final_score": 53.89,
+        "confidence_score": 82.97,
+        "final_score": 53.76,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-VFD-007",
         "intervention_title": "Variable-frequency drives on dyeing pumps and fans",
-        "explanation": "Ranked #14 with a final score of 53.89/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 14,910 kgCO2e/year (expected reduction range 4.0-7.0% of the targeted hotspot). Estimated CAPEX INR 650,000 (range 400,000-900,000), estimated annual saving INR 178,500, payback 3.64 years. Component scores: carbon 29.8, financial 70.7, feasibility 80.0, circularity 20.0, speed 80.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: IEA motor systems roadmap (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #14 with a final score of 53.76/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 14,910 kgCO2e/year (expected reduction range 4.0-7.0% of the targeted hotspot). Estimated CAPEX INR 650,000 (range 400,000-900,000), estimated annual saving INR 178,500, payback 3.64 years. Component scores: carbon 29.8, financial 70.7, feasibility 80.0, circularity 20.0, speed 80.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: IEA motor systems roadmap (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "a880937f-20b5-5a7a-bea5-ce8e03e1224a",
           "recommendation_id": "e59f5b12-2b6b-515e-abef-cb2f7331ec25",
@@ -744,9 +770,11 @@
             "opex_change_pct_mid": "0.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "14910.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -761,13 +789,13 @@
         "feasibility_score": 70.0,
         "circularity_score": 61.0,
         "implementation_speed_score": 56.0,
-        "confidence_score": 85.6,
-        "final_score": 53.51,
+        "confidence_score": 82.97,
+        "final_score": 53.38,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-DYEBATH-003",
         "intervention_title": "Dye-bath water recirculation with heat recovery",
-        "explanation": "Ranked #15 with a final score of 53.51/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 9,692 kgCO2e/year (expected reduction range 4.0-7.0% of the targeted hotspot). Estimated CAPEX INR 1,150,000 (range 800,000-1,500,000), estimated annual saving INR 332,125, payback 3.46 years. Component scores: carbon 19.4, financial 72.7, feasibility 70.0, circularity 61.0, speed 56.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: ZLD / textile water-reuse pilot data (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #15 with a final score of 53.38/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Saved resources at versioned emission factors yield 9,692 kgCO2e/year (expected reduction range 4.0-7.0% of the targeted hotspot). Estimated CAPEX INR 1,150,000 (range 800,000-1,500,000), estimated annual saving INR 332,125, payback 3.46 years. Component scores: carbon 19.4, financial 72.7, feasibility 70.0, circularity 61.0, speed 56.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: ZLD / textile water-reuse pilot data (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "bd27906b-243f-55e6-801c-c9b100fbeb50",
           "recommendation_id": "14fc7194-7491-53af-9240-ffa1b138179d",
@@ -795,9 +823,11 @@
             "opex_change_pct_mid": "-2.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "9691.500000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -812,13 +842,13 @@
         "feasibility_score": 80.0,
         "circularity_score": 30.0,
         "implementation_speed_score": 64.0,
-        "confidence_score": 85.6,
-        "final_score": 34.21,
+        "confidence_score": 82.97,
+        "final_score": 34.08,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-STENTER-HR-010",
         "intervention_title": "Stenter exhaust-air heat recovery",
-        "explanation": "Ranked #16 with a final score of 34.21/100 for hotspot #3 (Drying, severity LOW, 18.80% of operational emissions, 106,500 kgCO2e). Saved resources at versioned emission factors yield 11,715 kgCO2e/year (expected reduction range 6.0-10.0% of the targeted hotspot). Estimated CAPEX INR 1,350,000 (range 900,000-1,800,000), estimated annual saving INR 127,500, payback 10.59 years. Component scores: carbon 23.4, financial 0.0, feasibility 80.0, circularity 30.0, speed 64.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 39.6, waste ratio not estimated, improvement potential 50.0 (out of 100). Evidence source: Textile stenter heat-recovery studies (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #16 with a final score of 34.08/100 for hotspot #3 (Drying, severity LOW, 18.80% of operational emissions, 106,500 kgCO2e). Saved resources at versioned emission factors yield 11,715 kgCO2e/year (expected reduction range 6.0-10.0% of the targeted hotspot). Estimated CAPEX INR 1,350,000 (range 900,000-1,800,000), estimated annual saving INR 127,500, payback 10.59 years. Component scores: carbon 23.4, financial 0.0, feasibility 80.0, circularity 30.0, speed 64.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 39.6, waste ratio not estimated, improvement potential 50.0 (out of 100). Evidence source: Textile stenter heat-recovery studies (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "3e40b721-7003-5ab2-95a1-b20f8af76df8",
           "recommendation_id": "a81d2c01-1f8f-5b01-8072-63b97c938cb8",
@@ -846,9 +876,11 @@
             "opex_change_pct_mid": "1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "11715.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -863,13 +895,13 @@
         "feasibility_score": 80.0,
         "circularity_score": 44.5,
         "implementation_speed_score": 72.0,
-        "confidence_score": 85.6,
-        "final_score": 32.18,
+        "confidence_score": 82.97,
+        "final_score": 32.05,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-RAIN-013",
         "intervention_title": "Rainwater harvesting for wet processing",
-        "explanation": "Ranked #17 with a final score of 32.18/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Expected reduction of 1.0-2.0% of the hotspot's emissions, i.e. 3,383 kgCO2e/year. Estimated CAPEX INR 850,000 (range 500,000-1,200,000), estimated annual saving INR 9,688, payback 87.74 years. Component scores: carbon 6.8, financial 0.0, feasibility 80.0, circularity 44.5, speed 72.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Rainwater harvesting design guides (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #17 with a final score of 32.05/100 for hotspot #1 (Boiler, severity HIGH, 39.83% of operational emissions, 225,561 kgCO2e). Expected reduction of 1.0-2.0% of the hotspot's emissions, i.e. 3,383 kgCO2e/year. Estimated CAPEX INR 850,000 (range 500,000-1,200,000), estimated annual saving INR 9,688, payback 87.74 years. Component scores: carbon 6.8, financial 0.0, feasibility 80.0, circularity 44.5, speed 72.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 100.0, waste ratio not estimated, improvement potential 90.0 (out of 100). Evidence source: Rainwater harvesting design guides (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "7bfd3d71-ffb2-5337-bc62-50f7c3bb641b",
           "recommendation_id": "b58567b6-9fe2-5c1f-99ae-a10d83cbf4ff",
@@ -897,9 +929,11 @@
             "opex_change_pct_mid": "-0.5",
             "co2_saving_basis": "midpoint of expected CO2 reduction range applied to targeted hotspot emissions (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "3383.412000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       },
       {
@@ -914,13 +948,13 @@
         "feasibility_score": 45.0,
         "circularity_score": 53.5,
         "implementation_speed_score": 36.0,
-        "confidence_score": 85.6,
-        "final_score": 25.34,
+        "confidence_score": 82.97,
+        "final_score": 25.21,
         "status": "SUGGESTED",
         "generated_at": "2026-09-12T12:00:00+00:00",
         "intervention_code": "INT-RO-014",
         "intervention_title": "Membrane filtration (UF + RO) for dyehouse effluent reuse",
-        "explanation": "Ranked #18 with a final score of 25.34/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Expected reduction of 2.0-4.0% of the hotspot's emissions, i.e. 4,473 kgCO2e/year. Estimated CAPEX INR 3,500,000 (range 2,500,000-4,500,000), estimated annual saving INR 168,100, payback 20.82 years. Component scores: carbon 8.9, financial 0.0, feasibility 45.0, circularity 53.5, speed 36.0, confidence 85.6 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: ZLD and effluent reuse studies (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 85.6/100; hotspot data quality 89.3/100.",
+        "explanation": "Ranked #18 with a final score of 25.21/100 for hotspot #2 (Dyeing, severity MODERATE, 26.33% of operational emissions, 149,100 kgCO2e). Expected reduction of 2.0-4.0% of the hotspot's emissions, i.e. 4,473 kgCO2e/year. Estimated CAPEX INR 3,500,000 (range 2,500,000-4,500,000), estimated annual saving INR 168,100, payback 20.82 years. Component scores: carbon 8.9, financial 0.0, feasibility 45.0, circularity 53.5, speed 36.0, confidence 83.0 (out of 100 each). Hotspot indicators: inefficiency 61.2, waste ratio not estimated, improvement potential 70.0 (out of 100). Evidence source: ZLD and effluent reuse studies (mock). Assumptions: static energy prices; reductions applied to the process baseline; deterministic carbon estimate until the P3 engine supplies verified baselines. Overall confidence 83.0/100; hotspot data quality 85.0/100.",
         "impact": {
           "id": "c730f728-e174-5124-ab76-5d0d1628ef82",
           "recommendation_id": "f5388232-20c9-5309-ae67-0c5b7a6c7d0d",
@@ -948,9 +982,11 @@
             "opex_change_pct_mid": "4.5",
             "co2_saving_basis": "midpoint of expected CO2 reduction range applied to targeted hotspot emissions (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true,
+            "net_co2_saving_kg_signed": "4473.000000"
           },
-          "confidence_score": 85.6
+          "confidence_score": 82.97
         }
       }
     ]
@@ -976,9 +1012,9 @@
           "feasibility": 100.0,
           "circularity": 50.9,
           "implementation_speed": 92.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 71.86,
+        "final_score": 71.73,
         "estimated_co2_saving_kg": 17903.456,
         "estimated_capex": 275000.0,
         "estimated_annual_saving": 484450.0,
@@ -996,9 +1032,9 @@
           "feasibility": 100.0,
           "circularity": 20.0,
           "implementation_speed": 96.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 70.17,
+        "final_score": 70.04,
         "estimated_co2_saving_kg": 22152.0,
         "estimated_capex": 200000.0,
         "estimated_annual_saving": 285600.0,
@@ -1016,9 +1052,9 @@
           "feasibility": 100.0,
           "circularity": 20.0,
           "implementation_speed": 100.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 67.44,
+        "final_score": 67.31,
         "estimated_co2_saving_kg": 16937.796,
         "estimated_capex": 0.0,
         "estimated_annual_saving": 283050.0,
@@ -1036,9 +1072,9 @@
           "feasibility": 80.0,
           "circularity": 30.0,
           "implementation_speed": 60.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 65.98,
+        "final_score": 65.85,
         "estimated_co2_saving_kg": 27974.15,
         "estimated_capex": 1600000.0,
         "estimated_annual_saving": 830025.0,
@@ -1056,9 +1092,9 @@
           "feasibility": 80.0,
           "circularity": 50.9,
           "implementation_speed": 84.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 63.17,
+        "final_score": 63.04,
         "estimated_co2_saving_kg": 11189.66,
         "estimated_capex": 425000.0,
         "estimated_annual_saving": 323800.0,
@@ -1076,9 +1112,9 @@
           "feasibility": 100.0,
           "circularity": 56.0,
           "implementation_speed": 92.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 63.07,
+        "final_score": 62.94,
         "estimated_co2_saving_kg": 1988.0,
         "estimated_capex": 140000.0,
         "estimated_annual_saving": 192000.0,
@@ -1096,9 +1132,9 @@
           "feasibility": 80.0,
           "circularity": 20.0,
           "implementation_speed": 72.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 62.01,
+        "final_score": 61.88,
         "estimated_co2_saving_kg": 51120.0,
         "estimated_capex": 4250000.0,
         "estimated_annual_saving": 530400.0,
@@ -1116,9 +1152,9 @@
           "feasibility": 100.0,
           "circularity": 48.0,
           "implementation_speed": 92.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 61.02,
+        "final_score": 60.89,
         "estimated_co2_saving_kg": 568.0,
         "estimated_capex": 175000.0,
         "estimated_annual_saving": 793800.0,
@@ -1136,9 +1172,9 @@
           "feasibility": 100.0,
           "circularity": 51.0,
           "implementation_speed": 84.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 60.84,
+        "final_score": 60.71,
         "estimated_co2_saving_kg": 852.0,
         "estimated_capex": 425000.0,
         "estimated_annual_saving": 1020600.0,
@@ -1156,9 +1192,9 @@
           "feasibility": 100.0,
           "circularity": 60.0,
           "implementation_speed": 80.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 60.78,
+        "final_score": 60.65,
         "estimated_co2_saving_kg": 3976.0,
         "estimated_capex": 500000.0,
         "estimated_annual_saving": 244800.0,
@@ -1176,9 +1212,9 @@
           "feasibility": 70.0,
           "circularity": 49.0,
           "implementation_speed": 84.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 60.34,
+        "final_score": 60.21,
         "estimated_co2_saving_kg": 8200.5,
         "estimated_capex": 300000.0,
         "estimated_annual_saving": 288225.0,
@@ -1196,9 +1232,9 @@
           "feasibility": 100.0,
           "circularity": 20.0,
           "implementation_speed": 96.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 60.28,
+        "final_score": 60.15,
         "estimated_co2_saving_kg": 13632.0,
         "estimated_capex": 500000.0,
         "estimated_annual_saving": 183600.0,
@@ -1216,9 +1252,9 @@
           "feasibility": 80.0,
           "circularity": 30.0,
           "implementation_speed": 60.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 60.12,
+        "final_score": 59.99,
         "estimated_co2_saving_kg": 29093.116,
         "estimated_capex": 2750000.0,
         "estimated_annual_saving": 642600.0,
@@ -1236,9 +1272,9 @@
           "feasibility": 80.0,
           "circularity": 20.0,
           "implementation_speed": 80.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 53.89,
+        "final_score": 53.76,
         "estimated_co2_saving_kg": 14910.0,
         "estimated_capex": 650000.0,
         "estimated_annual_saving": 178500.0,
@@ -1256,9 +1292,9 @@
           "feasibility": 70.0,
           "circularity": 61.0,
           "implementation_speed": 56.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 53.51,
+        "final_score": 53.38,
         "estimated_co2_saving_kg": 9691.5,
         "estimated_capex": 1150000.0,
         "estimated_annual_saving": 332125.0,
@@ -1276,9 +1312,9 @@
           "feasibility": 80.0,
           "circularity": 30.0,
           "implementation_speed": 64.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 34.21,
+        "final_score": 34.08,
         "estimated_co2_saving_kg": 11715.0,
         "estimated_capex": 1350000.0,
         "estimated_annual_saving": 127500.0,
@@ -1296,9 +1332,9 @@
           "feasibility": 80.0,
           "circularity": 44.5,
           "implementation_speed": 72.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 32.18,
+        "final_score": 32.05,
         "estimated_co2_saving_kg": 3383.412,
         "estimated_capex": 850000.0,
         "estimated_annual_saving": 9687.5,
@@ -1316,9 +1352,9 @@
           "feasibility": 45.0,
           "circularity": 53.5,
           "implementation_speed": 36.0,
-          "confidence": 85.598
+          "confidence": 82.97
         },
-        "final_score": 25.34,
+        "final_score": 25.21,
         "estimated_co2_saving_kg": 4473.0,
         "estimated_capex": 3500000.0,
         "estimated_annual_saving": 168100.0,

@@ -71,12 +71,17 @@ class EcoLeakEngine:
         facility = self.facility(facility_id)
         activity = self.data_source.get_activity_data(facility_id, reporting_period_id)
         factors = self.data_source.get_emission_factors()
+        # P3-02: pass the period window so out-of-window factors are de-prioritised
+        # and flagged (tolerate a missing period so ad-hoc calls still work).
+        period = self.data_source.get_reporting_period(reporting_period_id)
         inventory = self.carbon.calculate(
             facility=facility,
             reporting_period_id=reporting_period_id,
             activity_data=activity,
             emission_factors=factors,
             generated_at=generated_at,
+            period_start=getattr(period, "start_date", None),
+            period_end=getattr(period, "end_date", None),
         )
         self._inventory_cache[(facility_id, reporting_period_id)] = inventory
         return inventory

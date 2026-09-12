@@ -476,6 +476,10 @@ class ImpactSimulator:
             "static_prices": self.config.static_prices,
             "cost_model_note": self.config.cost_model.assumption_note,
             "currency": self.config.cost_model.currency,
+            # P3-08: price provenance so "costed" outputs are traceable.
+            "price_source": self.config.cost_model.price_source,
+            "price_version": self.config.cost_model.price_version,
+            "price_valid_year": self.config.cost_model.price_valid_year,
             "target_processes": matched_pids,
             "target_categories": sorted({s.category for s in targets}),
             "co2_saving_basis": "baseline minus projected emissions after quantity reductions",

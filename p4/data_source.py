@@ -24,8 +24,10 @@ from __future__ import annotations
 import json
 import os
 from dataclasses import dataclass, field
+from decimal import Decimal
 from pathlib import Path
 from typing import Optional
+from uuid import UUID
 
 from p4.contracts import (
     ActivityCategory,
@@ -35,7 +37,7 @@ from p4.contracts import (
     Organization,
     Process,
 )
-from p4.models import ResourceEmissionFactors
+from p4.models import FacilityContext, ProcessResourceBaseline, ResourceEmissionFactors, TariffSet
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MOCK_HOTSPOTS = REPO_ROOT / "mocks" / "mock_hotspot_output.json"
@@ -250,3 +252,88 @@ def resource_factors_from_dataset(
 
     factors = [EmissionFactor.model_validate(item) for item in dataset.get("emission_factors", [])]
     return resource_factors_from_factors(factors, region_country=region_country)
+
+
+# ---------------------------------------------------------------------------
+# Live FacilityContext (GA-01/P4-C1 fix)
+# ---------------------------------------------------------------------------
+
+_GAS_UNITS = {"m3", "m³", "scm", "nm3"}
+_LIQUID_UNITS = {"l", "litre", "liter", "litres", "liters"}
+_PACKAGING_HINTS = ("ldpe", "packag", "film", "plastic")
+
+
+def _resource_slot(activity) -> Optional[str]:
+    """Map one live activity row to the FacilityContext resource slot it fills."""
+    category = (
+        activity.activity_category.value
+        if hasattr(activity.activity_category, "value")
+        else str(activity.activity_category)
+    )
+    unit = (activity.normalized_unit or "").strip().lower()
+    sub = (activity.activity_subcategory or "").lower()
+    if category == ActivityCategory.ELECTRICITY.value and unit == "kwh":
+        return "electricity_kwh_per_year"
+    if category == ActivityCategory.FUEL.value and unit in _GAS_UNITS:
+        return "natural_gas_m3_per_year"
+    if category == ActivityCategory.FUEL.value and unit in _LIQUID_UNITS:
+        return "diesel_litres_per_year"
+    if category == ActivityCategory.WATER.value and (
+        "effluent" in sub or "wastewater" in sub or "waste water" in sub
+    ) and unit in _GAS_UNITS:
+        return "wastewater_m3_per_year"
+    if category == ActivityCategory.WATER.value and unit in _GAS_UNITS:
+        return "water_m3_per_year"
+    if category == ActivityCategory.WASTE.value and unit == "kg":
+        return "waste_kg_per_year"
+    if (
+        category == ActivityCategory.MATERIAL.value
+        and unit == "kg"
+        and any(hint in sub for hint in _PACKAGING_HINTS)
+    ):
+        return "packaging_kg_per_year"
+    return None
+
+
+def default_tariffs() -> TariffSet:
+    """The documented demo tariff fixture (prices). Quantities come from live
+    activity data; only prices remain fixture, surfaced via ``data_is_stub``."""
+    raw = json.loads((REPO_ROOT / "p4" / "demo" / "demo_context.json").read_text(encoding="utf-8"))
+    return TariffSet.model_validate(raw["tariffs"])
+
+
+def build_facility_context(engine, facility_id: str, period_id: str) -> FacilityContext:
+    """Build a FacilityContext for the REQUESTED facility/period from the live
+    data source.
+
+    GA-01 / P4-C1 fix: ``p4/api.py`` previously ranked live hotspots against the
+    hardcoded mock demo facility/context, so every non-demo facility failed
+    ``p4/engine.py``'s facility-match guard with a 500. Resource baselines are
+    now aggregated from real ``activity_data``; tariff prices remain the
+    documented demo fixture (``is_fixture=True`` → ``assumptions.data_is_stub``).
+    """
+    facility = engine.data_source.get_facility(str(facility_id))
+    if facility is None:
+        raise ValueError(f"facility {facility_id} not found in the live data source")
+    processes = engine.data_source.get_processes(str(facility_id))
+    name_by_id = {str(process.id): process.name for process in processes}
+    activities = engine.data_source.get_activity_data(str(facility_id), str(period_id))
+    aggregated: dict[str, dict[str, Decimal]] = {}
+    for activity in activities:
+        slot = _resource_slot(activity)
+        if slot is None or activity.normalized_value is None:
+            continue
+        key = name_by_id.get(str(activity.process_id), "Unassigned")
+        bucket = aggregated.setdefault(key, {})
+        bucket[slot] = bucket.get(slot, Decimal("0")) + Decimal(activity.normalized_value)
+    baselines = [
+        ProcessResourceBaseline(process_name=name, **values)
+        for name, values in sorted(aggregated.items())
+    ]
+    return FacilityContext(
+        facility_id=facility.id,
+        reporting_period_id=UUID(str(period_id)),
+        process_resources=baselines,
+        tariffs=default_tariffs(),
+        is_fixture=True,
+    )

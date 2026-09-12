@@ -6,6 +6,7 @@ import { ProcessesPage } from './pages/Processes'
 import { DataInputPage } from './pages/DataInput'
 import { ProfilingPage } from './pages/Profiling'
 import { ScenariosPage } from './pages/Scenarios'
+import { ReportsPage } from './pages/Reports'
 import {
   getFallbackGroups, resolveMockMode, setMockModeOverride, subscribeFallbacks,
   subscribeMockMode, usePhase2ModeLabel,
@@ -26,7 +27,8 @@ const LINKS = [
   { to: '/processes', label: 'Processes', icon: 'M4 6h16 M4 12h16 M4 18h16 M8 6v12 M16 6v12' },
   { to: '/data', label: 'Data input', icon: 'M12 3v12 M7 10l5 5 5-5 M4 21h16' },
   { to: '/profiling', label: 'Profiling', icon: 'M4 21V10l8-6 8 6v11 M9 21v-6h6v6' },
-  { to: '/scenarios', label: 'Scenarios', icon: 'M4 19V5 M4 15c4-8 6 2 10-6 2-4 3-4 6-4 M4 19h16' }
+  { to: '/scenarios', label: 'Scenarios', icon: 'M4 19V5 M4 15c4-8 6 2 10-6 2-4 3-4 6-4 M4 19h16' },
+  { to: '/reports', label: 'Reports', icon: 'M6 3h9l4 4v14H6z M15 3v4h4 M9 12h7 M9 16h7' }
 ]
 
 /**
@@ -102,6 +104,7 @@ export function App() {
             <Route path="/data" element={<DataInputPage />} />
             <Route path="/profiling" element={<ProfilingPage />} />
             <Route path="/scenarios" element={<ScenariosPage />} />
+            <Route path="/reports" element={<ReportsPage />} />
             <Route path="*" element={<div className="notice"><b>Not found.</b> This build ships six routes only.</div>} />
           </Routes>
           <footer style={{ marginTop: 34, fontSize: '.76rem', color: 'var(--legend)' }}>

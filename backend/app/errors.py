@@ -146,6 +146,26 @@ def register_exception_handlers(app: FastAPI) -> None:
             "unhandled error path=%s method=%s request_id=%s",
             request.url.path, request.method, request_id,
         )
+        # P1-04 fix: Starlette runs this handler at ServerErrorMiddleware level,
+        # OUTSIDE CORSMiddleware and the security-headers middleware, so 5xx
+        # responses previously carried no CORS/security/request-id headers and
+        # browsers surfaced them as opaque ERR_FAILED. Re-apply them here.
+        headers = {
+            "X-Content-Type-Options": "nosniff",
+            "X-Frame-Options": "DENY",
+            "Referrer-Policy": "no-referrer",
+            "Content-Security-Policy": "default-src 'none'; frame-ancestors 'none'",
+        }
+        origin = request.headers.get("origin")
+        if origin:
+            from app.config import get_settings
+
+            if origin in get_settings().cors_origins_list:
+                headers["Access-Control-Allow-Origin"] = origin
+                headers["Access-Control-Allow-Credentials"] = "true"
+                headers["Vary"] = "Origin"
+        if request_id:
+            headers["X-Request-Id"] = request_id
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=error_payload(
@@ -154,4 +174,5 @@ def register_exception_handlers(app: FastAPI) -> None:
                 "ERROR",
                 {"request_id": request_id} if request_id else {},
             ),
+            headers=headers,
         )
