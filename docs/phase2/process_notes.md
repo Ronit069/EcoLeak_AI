@@ -56,3 +56,24 @@ This branch (`phase2-fixes`) contains only remediation changes; the previous
 audit's commit `4a56f59` (docs + P1 K1 normalization) was itself a direct
 push to main, acknowledged in PHASE2_AUDIT.md's own process findings — this
 remediation is branch-based per the remediation instructions.
+## Verification anti-patterns found in K1 remediation (for future contributors)
+
+Two separate false-positive "verified" claims happened here, for two different
+reasons. Both are now guarded by permanent checks (see the `K1-adversarial`
+job in `.github/workflows/phase2-ci.yml`).
+
+- **Anti-pattern 1 — loose assertions.** A test accepted `engine` or
+  `local_fallback` interchangeably (`assert status == 200` with no field
+  check, or `in {set}` unions spanning both success AND failure values).
+  Fix claimed, test green, bug live. Habit: any test claiming to verify a
+  fix MUST assert the distinguishing value ONLY (e.g. `computedVia ==
+  'engine'`), never a superset. Grep reviews for `in {` / `or` unions near
+  success/failure vocabularies.
+- **Anti-pattern 2 — env indirection silently breaking build tooling.**
+  `getEnv()` indirection made Vite's static `import.meta.env.X` replacement
+  no-op silently, so both correct and broken backend targets produced
+  IDENTICAL bundles and identical UI labels (masked further by the vite
+  proxy routing relative `/api` to the fixed backend). The dual-state test
+  (working vs deliberately-broken backend) is what caught it. Habit: for
+  any fix that claims to make broken behavior VISIBLY different, test BOTH
+  states with proxy-free serving and assert the baked artifacts differ.
