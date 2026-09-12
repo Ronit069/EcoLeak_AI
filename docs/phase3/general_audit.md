@@ -112,7 +112,7 @@ Only items this pass actually executed are rated; the rest are marked
 
 ## 3. Notifications (per the CRITICAL rule)
 
-- **P4 — CRITICAL (GA-01, owner):** `p4/api.py::_run_ranker`/`_facility_and_org`/`_context` hardcode the demo facility/context; every non-demo tenant gets 500 on J2/N1. Fix with the existing `p4/data_source.py` helpers. Tracking issue: see PR/issue linked from this file.
+- **P4 — CRITICAL (GA-01, owner):** `p4/api.py::_run_ranker`/`_facility_and_org`/`_context` hardcode the demo facility/context; every non-demo tenant gets 500 on J2/N1. Fix with the existing `p4/data_source.py` helpers. Tracking: **issue #5**, PR #4.
 - **P1 — CRITICAL (consumer):** Recommendations/Dashboard are only safe for the seeded demo UUID until GA-01 is fixed; non-demo renders will error or fall back. The mock banner keeps the demo green in the interim.
 - **P2 — HIGH/MEDIUM:** GA-01 secondary instance (`engine_bridge.real_recommendations` loses the Module P recommendations section for non-demo facilities); GA-02 (fail-closed auth mode for non-development); GA-05 (D1 unit labeling).
 - **P3 — MEDIUM/LOW:** GA-04 (F1 period lock, your P3-05) and GA-06 (mock-path K1 id coverage, your P3-01) re-confirmed open at HEAD.
