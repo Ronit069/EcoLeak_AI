@@ -42,3 +42,27 @@ following consumers should be aware of additive items:
   still reads the same columns.
 - **P4:** no change to J1/J2 input. Module P consumes the ranker output only when
   `USE_MOCK_DATA=false` and degrades to `UNAVAILABLE` on error.
+
+---
+
+# P3 — Phase 2 (branch `phase2-p3`)
+
+**Status: NO frozen contract changes.**
+
+P3 Phase 2 swapped the engine's data source to P2's real runtime tables behind the
+`USE_MOCK_DATA` gate. `contracts/schemas.py` field names and the
+`api_contract.md` F/G/K/L/H response shapes are unchanged. `HotspotDetectionResult`
+from the real-data run is field-for-field identical to the mock baseline
+(`docs/phase2/p3_shape_diff.md`), so P1 and P4 need no changes.
+
+## Additive-only changes (no existing shape altered)
+
+| Area | Change | Old shape | New shape | Reason |
+|---|---|---|---|---|
+| Config | `ECOLEAK_USE_MOCK_DATA` env flag + `default_data_source(use_mock_data)` | DSN-presence only | explicit boolean gate, default stays mock | shared Phase 2 mock-to-real rule |
+| Bootstrap | `engine.service.build_engine(use_mock_data, dsn, config)` | `EcoLeakEngine(data_source=...)` only | optional factory (constructor unchanged) | one place to select mock vs real |
+| Artifacts | `docs/phase2/p3_baseline_output.json`, `p3_real_data_output.json`, `p3_shape_diff.md`; `tools/phase2_p3_shape_diff.py` | — | new files | baseline regression + shape proof |
+| Tests | `tests/test_data_source_flag.py`, `tests/test_phase2_real_source.py` | — | new tests | pin flag behavior + real-factor gaps |
+
+No response envelope, field name, enum value, or endpoint path changed. No
+dependency or consumer of P3's JSON output is affected.

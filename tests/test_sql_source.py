@@ -36,7 +36,12 @@ def _dt(value):
     return datetime.fromisoformat(str(value).replace("Z", "+00:00"))
 
 
-def _seed(engine) -> None:
+def _seed(engine, factors=None) -> None:
+    """Seed a portable SQLite image of the P2 tables.
+
+    ``factors`` defaults to the mock dataset factors; pass a list of factor dicts
+    (e.g. P2's ``backend/app/seed/real_factors.json``) for a real-data run.
+    """
     create_sql_schema(engine)
     data = json.loads(MOCKS.read_text(encoding="utf-8"))
     with engine.begin() as conn:
@@ -106,11 +111,13 @@ def _seed(engine) -> None:
                     "created_at": _dt(a["created_at"]),
                 }],
             )
-        for f in data["emission_factors"]:
+        for f in (factors if factors is not None else data["emission_factors"]):
             row = {
                 k: (UUID(v) if k == "id" else _dt(v) if k == "created_at" else v)
                 for k, v in f.items()
+                if k not in ("supplier_id", "supplier_specific")
             }
+            row.setdefault("created_at", _dt("2026-01-01T00:00:00+00:00"))
             conn.execute(
                 __import__("engine.sql_source", fromlist=["emission_factors"]).emission_factors.insert(), [row],
             )

@@ -167,15 +167,51 @@ def load_mock_data_source(dataset_path: str | Path | None = None) -> MockDataSou
     return MockDataSource(dataset_path)
 
 
-def default_data_source():
-    """Env-driven source selection (B2).
+def resolve_use_mock_data(use_mock_data: bool | None = None) -> bool | None:
+    """Resolve the Phase 2 mock-to-real gate.
 
-    ``ECOLEAK_SQL_DSN`` set  -> SQLActivityDataSource over P2's tables.
-    Unset (Phase 1 default)  -> mock data source (fallback / test fixture).
+    Precedence: explicit argument > ``ECOLEAK_USE_MOCK_DATA`` env >
+    ``None`` (legacy: DSN presence decides, preserving Phase 1 behavior).
+
+    Accepted truthy values: ``1/true/yes/on`` (case-insensitive).
     """
     import os
 
-    dsn = os.environ.get("ECOLEAK_SQL_DSN")
+    if use_mock_data is not None:
+        return bool(use_mock_data)
+    raw = os.environ.get("ECOLEAK_USE_MOCK_DATA")
+    if raw is None or not raw.strip():
+        return None
+    return raw.strip().lower() in {"1", "true", "yes", "on"}
+
+
+def default_data_source(use_mock_data: bool | None = None):
+    """Env- and flag-driven source selection (B2 + Phase 2 gate).
+
+    Phase 2 rule: every mock-to-real swap is behind ``USE_MOCK_DATA`` so ``main``
+    can fall back to the known-good mock instantly.
+
+    - ``use_mock_data=True``  -> mock data source (even if a DSN is present).
+    - ``use_mock_data=False`` -> :class:`SQLActivityDataSource` over P2 tables;
+      requires ``ECOLEAK_SQL_DSN`` / ``ENGINE_DSN``.
+    - ``use_mock_data=None``  -> legacy Phase 1 behavior: DSN set -> SQL, else mock.
+    """
+    import os
+
+    flag = resolve_use_mock_data(use_mock_data)
+    dsn = os.environ.get("ECOLEAK_SQL_DSN") or os.environ.get("ENGINE_DSN")
+
+    if flag is True:
+        return load_mock_data_source()
+    if flag is False:
+        if not dsn:
+            raise ValueError(
+                "USE_MOCK_DATA=false requires ECOLEAK_SQL_DSN (or ENGINE_DSN) to be set."
+            )
+        from .sql_source import load_sql_data_source
+
+        return load_sql_data_source(dsn)
+    # Legacy: flag unset -> DSN presence decides (Phase 1 fallback behavior).
     if dsn:
         from .sql_source import load_sql_data_source
 

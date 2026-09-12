@@ -178,3 +178,31 @@ class EcoLeakEngine:
             history=features,
             generated_at=generated_at,
         )
+
+
+def build_engine(
+    *,
+    use_mock_data: bool | None = None,
+    dsn: str | None = None,
+    config: EngineConfig | None = None,
+) -> EcoLeakEngine:
+    """Phase 2 bootstrap: build an engine behind the ``USE_MOCK_DATA`` gate.
+
+    - ``use_mock_data`` defaults to the ``ECOLEAK_USE_MOCK_DATA`` env var, then to
+      the legacy DSN-presence rule (see :func:`engine.data_source.default_data_source`).
+    - Passing ``dsn`` explicitly selects the SQL source unless the flag forces mock.
+    - Default (nothing set) stays on the Phase 1 mock fixture so ``main`` remains
+      demo-able without a database.
+    """
+    from .data_source import default_data_source, load_mock_data_source, resolve_use_mock_data
+
+    if dsn is not None:
+        if resolve_use_mock_data(use_mock_data) is True:
+            source = load_mock_data_source()
+        else:
+            from .sql_source import load_sql_data_source
+
+            source = load_sql_data_source(dsn)
+    else:
+        source = default_data_source(use_mock_data)
+    return EcoLeakEngine(data_source=source, config=config)
