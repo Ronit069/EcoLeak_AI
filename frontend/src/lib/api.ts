@@ -2,6 +2,11 @@ import type {
   HotspotDetectionResult, RecommendationGenerationResult, MockDataset
 } from './contracts'
 import { hotspotResultSchema, recommendationResultSchema } from './zod'
+import {
+  normalizeSimulate, resolveComputedVia,
+  type SimulateOutcome, type SimulateResult,
+} from './engineDecision'
+export type { SimulateOutcome, SimulateResult }
 
 // ---------------------------------------------------------------------------
 // Phase 2 data layer: real API first, mock fallback behind USE_MOCK_DATA.
@@ -23,8 +28,12 @@ import { hotspotResultSchema, recommendationResultSchema } from './zod'
 // /api/context (additive endpoint logged in docs/phase2/contract_changes.md).
 // ---------------------------------------------------------------------------
 
-const API_URL = (import.meta.env.VITE_API_URL as string | undefined) ?? ''
-const API_TOKEN = (import.meta.env.VITE_API_TOKEN as string | undefined) ?? ''
+// Vite-bakeable: the literal import.meta.env.VITE_X tokens below are what
+// Vite statically replaces at build time (adversarial check asserts the
+// baked URL literal exists in dist). This module is NOT imported by Node
+// tests — pure logic lives in ./engineDecision.
+const API_URL: string = import.meta.env.VITE_API_URL ?? ''
+const API_TOKEN: string = import.meta.env.VITE_API_TOKEN ?? ''
 
 export type MockMode = 'auto' | 'mock' | 'live'
 export type Source = 'live' | 'mock'
@@ -54,12 +63,12 @@ export function resolveMockMode(): MockMode {
     const stored = localStorage.getItem(STORAGE_KEY)
     if (stored === 'mock' || stored === 'live' || stored === 'auto') return stored
   } catch { /* SSR/private mode — ignore */ }
-  const v2 = (import.meta.env.VITE_USE_MOCK_DATA as string | undefined)?.toLowerCase()
+  const v2 = import.meta.env.VITE_USE_MOCK_DATA?.toLowerCase()
   if (v2 === 'true') return 'mock'
   if (v2 === 'false') return 'live'
   if (v2 === 'auto') return 'auto'
   // Legacy Phase 1 flag.
-  const legacy = (import.meta.env.VITE_USE_MOCKS as string | undefined)?.toLowerCase()
+  const legacy = import.meta.env.VITE_USE_MOCKS?.toLowerCase()
   if (legacy !== undefined) return legacy === 'false' ? 'live' : 'mock'
   return 'auto'
 }
@@ -359,44 +368,7 @@ export async function fetchExplanation(
   )
 }
 
-export interface SimulateResult {
-  baseline_emissions_kg: number
-  projected_emissions_kg: number
-  total_co2_saving_kg: number | null
-  reduction_percent: number | null
-  total_capex: number
-  annual_saving: number | null
-  payback_years: number | null
-}
 
-/**
- * Defensive normalization of K1 responses. The frozen contract says the
- * response IS an ImpactAssessment; the live engine router wraps it as
- * { assessment: ImpactAssessment, interventions, over_budget, issues, ... }.
- * Unwrap (and prefer flat) so the UI works with either shape. Deviation from
- * the contracted shape is logged in docs/phase2/contract_changes.md §P1.
- */
-function normalizeSimulate(raw: Record<string, unknown>): SimulateResult | null {
-  const nested = raw['assessment'] as Record<string, unknown> | undefined
-  const pick = (k: string): unknown => raw[k] ?? (nested ? nested[k] : undefined)
-  if (pick('projected_emissions_kg') === undefined && pick('baseline_emissions_kg') === undefined) {
-    return null
-  }
-  return {
-    baseline_emissions_kg: Number(pick('baseline_emissions_kg')),
-    projected_emissions_kg: Number(pick('projected_emissions_kg')),
-    total_co2_saving_kg: pick('total_co2_saving_kg') == null ? null : Number(pick('total_co2_saving_kg')),
-    reduction_percent: pick('reduction_percent') == null ? null : Number(pick('reduction_percent')),
-    total_capex: Number(pick('total_capex') ?? 0),
-    annual_saving: pick('annual_saving') == null ? null : Number(pick('annual_saving')),
-    payback_years: pick('payback_years') == null ? null : Number(pick('payback_years')),
-  }
-}
-
-export interface SimulateOutcome {
-  data: SimulateResult | null
-  computedVia: 'engine' | 'local_fallback'
-}
 
 export async function fetchSimulate(
   facilityId: string,
@@ -428,12 +400,9 @@ export async function fetchSimulate(
     },
     async () => null,
   )
-  // Visible basis flag: 'engine' only when the K1 call truly resolved;
-  // any fallback (registry hit, network error, unresolved ids) = local math.
-  const computedVia: SimulateOutcome['computedVia'] =
-    r.source === 'live' && r.data ? 'engine' : 'local_fallback'
-  return { data: r.data, computedVia }
+  return { data: r.data, computedVia: resolveComputedVia(r.source, r.data) }
 }
+
 
 /** POST helper used by fetchSimulate (headers/body handling). */
 export async function postJson<T>(url: string, body: unknown): Promise<T> {
