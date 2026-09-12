@@ -460,6 +460,53 @@ class RecommendationFeedback(StrictBaseModel):
 
 
 # ---------------------------------------------------------------------------
+# Phase 2 remediation addendum (versioned, additive): formal response models
+# for Module N (dashboard) and Module K (simulate) as served by the merged
+# API. These were previously documented only in api_contract.md tables; the
+# live responses are validated against them by tests/test_remediation.py.
+# Additive only — no existing field/enum was renamed or removed.
+# ---------------------------------------------------------------------------
+
+
+class DashboardScopeBreakdown(StrictBaseModel):
+    SCOPE_1: Decimal = Field(ge=0)
+    SCOPE_2: Decimal = Field(ge=0)
+    SCOPE_3: Decimal = Field(ge=0)
+
+
+class DashboardResponse(StrictBaseModel):
+    """Module N (N1) response envelope. ``production_unit`` was added during
+    Phase 2 integration and formally accepted into the contract (see
+    docs/phase2/contract_changes.md, N1 deviation resolution)."""
+
+    total_kgco2e: Decimal = Field(ge=0)
+    scope_breakdown: DashboardScopeBreakdown
+    carbon_intensity: Optional[Decimal] = None
+    production_unit: Optional[str] = Field(default=None, max_length=30)
+    largest_hotspot: Optional[dict[str, Any]] = None
+    circularity_score: Optional[Decimal] = Field(default=None, ge=0, le=100)
+    potential_reduction_kgco2e: Decimal = Field(ge=0)
+    potential_annual_saving: Optional[Decimal] = None
+    last_calculated_at: Optional[datetime] = None
+    empty_state: bool = False
+
+
+class ScenarioSimulationEnvelope(StrictBaseModel):
+    """Module K (K1) response envelope as served by the merged API (Phase 2
+    canonical decision, docs/phase2/contract_changes.md): the simulator
+    returns the ImpactAssessment together with run-level metadata. The
+    frozen ``ImpactAssessment`` remains unchanged inside ``assessment``."""
+
+    scenario_id: UUID
+    assessment: "ImpactAssessment"
+    interventions: list[dict[str, Any]] = Field(default_factory=list)
+    payback_status: Optional[str] = None
+    payback_reason: Optional[str] = None
+    over_budget: bool = False
+    issues: list[dict[str, Any]] = Field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
 # Validation severity payload (DB doc 23) - used by API error/validation shape
 # ---------------------------------------------------------------------------
 

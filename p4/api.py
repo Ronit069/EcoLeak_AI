@@ -29,10 +29,16 @@ from engine.serialization import to_jsonable
 from p4.demo.run_demo import _load_json, _resource_factors
 from p4.engine import RecommendationConstraints, generate_with_diagnostics
 from p4.explainability import TemplateExplainer
-from p4.models import FacilityContext
+from p4.feedback import FeedbackEvent, InMemoryFeedbackStore
+from p4.models import FacilityContext, RejectionReasonCode
 from p4.serialization import to_api_dict
 
 router = APIRouter(tags=["recommendations"])
+
+# Module Q — Phase-2 remediation decision: wired into the merged surface now.
+# Store is in-memory + append-only (Phase-1 store); SQLAlchemy persistence is
+# logged as Phase-3 backlog (owner P2) in docs/phase2/contract_changes.md.
+_feedback_store = InMemoryFeedbackStore()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 MOCKS_DIR = REPO_ROOT / "mocks"
@@ -221,3 +227,43 @@ def leak_map(facility_id: str, period_id: str) -> dict:
         for h in hotspots.hotspots
     ]
     return to_jsonable({"nodes": nodes, "links": []})
+
+# ---------------------------------------------------------------------------
+# Module Q — feedback (Q1 submit / Q2 history), Phase-2 remediation wiring
+# ---------------------------------------------------------------------------
+
+
+@router.post("/api/recommendations/{recommendation_id}/feedback", status_code=201)
+def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> dict:
+    """Q1: capture Useful / Not Applicable / Consider Later / Implemented /
+    Rejected feedback with optional actual outcomess. REJECTED requires a
+    structured reason_code (spam/rate-limit guarded at the platform layer)."""
+    feedback_type = body.get("feedback_type")
+    if not feedback_type:
+        from engine.errors import MissingParameterError
+
+        raise MissingParameterError("feedback_type is required", {"recommendation_id": recommendation_id})
+    event: FeedbackEvent = _feedback_store.submit(
+        recommendation_id=recommendation_id,
+        feedback_type=feedback_type,
+        reason=body.get("reason"),
+        reason_code=(
+            RejectionReasonCode(body["reason_code"]) if body.get("reason_code") else None
+        ),
+        actual_capex=Decimal(str(body["actual_capex"])) if body.get("actual_capex") is not None else None,
+        actual_annual_saving=Decimal(str(body["actual_annual_saving"])) if body.get("actual_annual_saving") is not None else None,
+        actual_co2_saving_kg=Decimal(str(body["actual_co2_saving_kg"])) if body.get("actual_co2_saving_kg") is not None else None,
+    )
+    return to_api_dict(event)
+
+
+@router.get("/api/recommendations/{recommendation_id}/feedback")
+def feedback_history(recommendation_id: str) -> dict:
+    """Q2: latest state + full history for a recommendation."""
+    events = _feedback_store.history(recommendation_id)
+    latest = events[-1] if events else None
+    return {
+        "recommendation_id": recommendation_id,
+        "latest_state": to_api_dict(latest) if latest else None,
+        "history": [to_api_dict(e) for e in events],
+    }

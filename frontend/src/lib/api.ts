@@ -276,6 +276,7 @@ export interface DashboardPayload {
   total_kgco2e: number
   scope_breakdown: Record<string, number>
   carbon_intensity: number | null
+  production_unit?: string | null  // formally accepted Phase-2 additive key
   largest_hotspot: unknown | null
   circularity_score: number | null
   potential_reduction_kgco2e: number
@@ -392,16 +393,22 @@ function normalizeSimulate(raw: Record<string, unknown>): SimulateResult | null 
   }
 }
 
+export interface SimulateOutcome {
+  data: SimulateResult | null
+  computedVia: 'engine' | 'local_fallback'
+}
+
 export async function fetchSimulate(
   facilityId: string,
   periodId: string,
   selections: Array<{ intervention_id: string; adoption_percentage: number; selected?: boolean }>,
   budgetLimit?: number,
-): Promise<GroupResult<SimulateResult | null>> {
+): Promise<SimulateOutcome> {
   // K1: POST /api/scenarios/{scenario_id}/simulate (merged engine router).
-  // Fallback: null -> caller uses the local Module-K math (not a mock, so no
-  // "demo data" banner is raised for this group by itself).
-  return liveOrMock<SimulateResult | null>(
+  // BLOCKER-1 remediation: never silently fall back — the caller is told
+  // which basis produced the numbers (computedVia), and any live failure
+  // also lands 'scenario-simulate' in the demo-data banner group list.
+  const r = await liveOrMock<SimulateResult | null>(
     'scenario-simulate',
     async () => {
       const raw = await postJson<Record<string, unknown>>(
@@ -421,6 +428,11 @@ export async function fetchSimulate(
     },
     async () => null,
   )
+  // Visible basis flag: 'engine' only when the K1 call truly resolved;
+  // any fallback (registry hit, network error, unresolved ids) = local math.
+  const computedVia: SimulateOutcome['computedVia'] =
+    r.source === 'live' && r.data ? 'engine' : 'local_fallback'
+  return { data: r.data, computedVia }
 }
 
 /** POST helper used by fetchSimulate (headers/body handling). */

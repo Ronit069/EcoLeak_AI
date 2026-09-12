@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { usePhase1Data, Loading } from './Dashboard'
-import { fetchSimulate, simulateAdoption, type SimulateResult } from '../lib/api'
+import { fetchSimulate, simulateAdoption, type SimulateResult, type SimulateOutcome } from '../lib/api'
 import { fmtINR, fmtPct, fmtTonnes, fmtYears } from '../lib/format'
 
 // Modules O/K — Scenario UI + simulator (K1 live with local Module-K fallback).
@@ -39,12 +39,14 @@ export function ScenariosPage() {
     }))
     setSimKind('local-math')
     fetchSimulate(ids.facility_id, ids.reporting_period_id, selections, Number(budget) || undefined)
-      .then(r => {
+      .then((r: SimulateOutcome) => {
         if (!live) return
-        if (r.data) { setSim(r.data); setSimKind('k1-live') }
-        else setSim(localSim)
+        // BLOCKER-1 remediation: basis is explicit — local math only when the
+        // engine truly could not serve, and always labelled as such.
+        if (r.computedVia === 'engine' && r.data) { setSim(r.data); setSimKind('k1-live') }
+        else { setSim(r.data ?? localSim); setSimKind('local-math') }
       })
-      .catch(() => { if (live) setSim(localSim) })
+      .catch(() => { if (live) { setSim(localSim); setSimKind('local-math') } })
     return () => { live = false }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [adoptionKey, budget, recs, hotspots, ids])
@@ -139,13 +141,15 @@ export function ScenariosPage() {
           </div>
           {simKind === 'k1-live' ? (
             <div className="notice" style={{ border: '1px solid var(--low)', color: 'var(--low)' }}>
-              <b>K1 live simulation</b> — totals served by POST /api/scenarios/{'{id}'}/simulate.
+              <b>Engine-verified simulation (K1)</b> — computed_via=engine · totals served by
+              POST /api/scenarios/{'{id}'}/simulate.
             </div>
           ) : (
-            <div className="notice">
-              <b>Local Module-K math</b> — K1 simulate endpoint unreachable (or not yet served);
-              same rules (payback null when saving ≤ 0, projected floored at 0). Logged in
-              <span className="mono"> docs/phase2/p1_integration_log.md</span>.
+            <div className="notice" style={{ border: '1px solid #E4A11B' }}>
+              <b>Local Module-K math — computed_via=local_fallback</b> K1 simulate unavailable or
+              returned an error; numbers below are locally computed (payback null when saving ≤ 0,
+              projected floored at 0). 'scenario-simulate' appears in the demo-data banner when a
+              live call failed.
             </div>
           )}
           <button className="btn btn-primary" type="button">Save scenario (demo)</button>
