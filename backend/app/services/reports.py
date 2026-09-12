@@ -24,8 +24,9 @@ from app.models.activity import ActivityData
 from app.models.core import Facility, Organization, ReportingPeriod
 from app.models.report import Report
 from app.security import Principal
-from app.services import audit, quality
+from app.services import audit, engine_bridge, quality
 from app.schemas.serialize import facility_to_dict, organization_to_dict
+from app.config import get_settings
 
 REPO_ROOT = Path(__file__).resolve().parents[3]
 MOCK_HOTSPOTS = REPO_ROOT / "mocks" / "mock_hotspot_output.json"
@@ -92,24 +93,123 @@ def build_payload(
     template_version: str,
     include_scope3: bool,
 ) -> dict[str, Any]:
-    hotspots_mock = _load_json(MOCK_HOTSPOTS)
-    recommendations_mock = _load_json(MOCK_RECOMMENDATIONS)
+    settings = get_settings()
     assessment = quality.assess_period(db, facility, period, persist=False)
 
     boundary = ["SCOPE_1", "SCOPE_2"]
     if include_scope3:
         boundary.append("SCOPE_3")
 
-    total = hotspots_mock.get("total_emissions_kgco2e")
-    recommendations = recommendations_mock.get("recommendations", [])
+    rec_items: list[dict[str, Any]] = []
+
+    if settings.use_mock_data:
+        # Phase 1 known-good behavior (instant fallback for the audit window).
+        hotspots_mock = _load_json(MOCK_HOTSPOTS)
+        recommendations_mock = _load_json(MOCK_RECOMMENDATIONS)
+        total = hotspots_mock.get("total_emissions_kgco2e")
+        rec_items = recommendations_mock.get("recommendations", [])
+        scope_summary = {
+            "scope1_kgco2e": None,
+            "scope2_kgco2e": None,
+            "scope3_kgco2e": None,
+            "total_kgco2e": total,
+            "note": "Scope 1/2/3 split is produced by Module F (P3); total is the stub fixture.",
+        }
+        factor_provenance = _factor_provenance(db, facility, period)
+        hotspot_analysis = {
+            "status": "STUB",
+            "total_emissions_kgco2e": total,
+            "hotspots": hotspots_mock.get("hotspots", []),
+        }
+        circularity_assessment = {"status": "UNAVAILABLE", "note": "USE_MOCK_DATA=true."}
+        recommendations_section = {
+            "status": "STUB",
+            "budget_limit": recommendations_mock.get("budget_limit"),
+            "items": rec_items,
+        }
+        data_is_stub = True
+        stub_sources = [
+            "mocks/mock_hotspot_output.json (USE_MOCK_DATA=true)",
+            "mocks/mock_recommendation_output.json (USE_MOCK_DATA=true)",
+        ]
+        assumptions = [
+            "Hotspot and recommendation sections use the frozen Phase 1 mocks (USE_MOCK_DATA=true).",
+            "Scope summary uses the stub fixture total until Module F is queried live.",
+            "Report labelled DRAFT/INCOMPLETE where factors are UNRESOLVED.",
+        ]
+    else:
+        # Live F/G/J/L integration (Phase 2). Each section degrades independently.
+        engine = engine_bridge.build_engine()
+        fid, pid = str(facility.id), str(period.id)
+        inventory = engine_bridge.real_inventory(engine, fid, pid)
+        summary = inventory["summary"]
+        total = summary.get("total_kgco2e")
+        scope_summary = {
+            "scope1_kgco2e": summary.get("scope1_kgco2e"),
+            "scope2_kgco2e": summary.get("scope2_kgco2e"),
+            "scope3_kgco2e": summary.get("scope3_kgco2e"),
+            "total_kgco2e": total,
+            "carbon_intensity": summary.get("carbon_intensity"),
+            "production_unit": summary.get("production_unit"),
+            "onsite_generation_kgco2e": inventory.get("onsite_generation_kgco2e"),
+            "exported_electricity_kgco2e": inventory.get("exported_electricity_kgco2e"),
+            "note": (
+                "Live Module F output (USE_MOCK_DATA=false); on-site generation and "
+                "exported electricity are separate ledgers."
+            ),
+        }
+        factor_provenance = inventory["factor_provenance"] or _factor_provenance(db, facility, period)
+        try:
+            hotspots_real = engine_bridge.real_hotspots(engine, fid, pid)
+            hotspot_analysis = {
+                "status": "REAL",
+                "total_emissions_kgco2e": hotspots_real.get("total_emissions_kgco2e"),
+                "data_quality_score": hotspots_real.get("data_quality_score"),
+                "hotspots": hotspots_real.get("hotspots", []),
+            }
+        except Exception as exc:  # noqa: BLE001
+            hotspot_analysis = {"status": "UNAVAILABLE", "note": f"{type(exc).__name__}: {exc}"}
+
+        try:
+            circularity_assessment = {
+                "status": "REAL",
+                **engine_bridge.real_circularity(engine, fid, pid),
+            }
+        except Exception as exc:  # noqa: BLE001
+            circularity_assessment = {"status": "UNAVAILABLE", "note": f"{type(exc).__name__}: {exc}"}
+
+        ranking = engine_bridge.real_recommendations(engine, fid, pid)
+        if ranking and "__unavailable__" not in ranking:
+            rec_items = ranking.get("recommendations", [])
+            recommendations_section = {
+                "status": "REAL",
+                "budget_limit": ranking.get("budget_limit"),
+                "items": rec_items,
+            }
+        else:
+            rec_items = []
+            recommendations_section = {
+                "status": "UNAVAILABLE",
+                "note": (ranking or {}).get("__unavailable__", "P4 ranker unavailable"),
+                "items": [],
+            }
+
+        data_is_stub = False
+        stub_sources = []
+        assumptions = [
+            "Live engine output (USE_MOCK_DATA=false): F inventory, G hotspots, J recommendations, L circularity.",
+            "On-site generation and exported electricity are kept in separate ledgers (no double counting).",
+            "Report labelled DRAFT/INCOMPLETE where factors are UNRESOLVED.",
+        ]
+
     total_capex = sum(
-        float((r.get("impact") or {}).get("estimated_capex") or 0) for r in recommendations
+        float((r.get("impact") or {}).get("estimated_capex") or 0) for r in rec_items
     )
     total_annual_saving = sum(
-        float((r.get("impact") or {}).get("estimated_annual_saving") or 0) for r in recommendations
+        float((r.get("impact") or {}).get("estimated_annual_saving") or 0) for r in rec_items
     )
     total_co2_saving = sum(
-        float((r.get("impact") or {}).get("estimated_co2_saving_kg") or 0) for r in recommendations
+        float((r.get("impact") or {}).get("estimated_co2_saving_kg") or 0) for r in rec_items
     )
 
     return {
@@ -117,11 +217,9 @@ def build_payload(
             "template_version": template_version,
             "include_scope3": include_scope3,
             "generated_at": utcnow().isoformat(),
-            "data_is_stub": True,
-            "stub_sources": [
-                "mocks/mock_hotspot_output.json (Module G pending P3)",
-                "mocks/mock_recommendation_output.json (Module J pending P4)",
-            ],
+            "use_mock_data": settings.use_mock_data,
+            "data_is_stub": data_is_stub,
+            "stub_sources": stub_sources,
         },
         "profile": {
             "organization": organization_to_dict(organization),
@@ -135,14 +233,8 @@ def build_payload(
             },
         },
         "boundary": {"scopes": boundary},
-        "factor_provenance": _factor_provenance(db, facility, period),
-        "scope_summary": {
-            "scope1_kgco2e": None,
-            "scope2_kgco2e": None,
-            "scope3_kgco2e": None,
-            "total_kgco2e": total,
-            "note": "Scope 1/2/3 split is produced by Module F (P3); total is the stub fixture.",
-        },
+        "factor_provenance": factor_provenance,
+        "scope_summary": scope_summary,
         "data_quality_score": {
             "total_score": assessment.total_score,
             "components": {
@@ -154,20 +246,9 @@ def build_payload(
             },
             "issues": assessment.issues or [],
         },
-        "hotspot_analysis": {
-            "status": "STUB",
-            "total_emissions_kgco2e": total,
-            "hotspots": hotspots_mock.get("hotspots", []),
-        },
-        "circularity_assessment": {
-            "status": "UNAVAILABLE",
-            "note": "Module L output not yet available (P3/P4).",
-        },
-        "recommendations": {
-            "status": "STUB",
-            "budget_limit": recommendations_mock.get("budget_limit"),
-            "items": recommendations,
-        },
+        "hotspot_analysis": hotspot_analysis,
+        "circularity_assessment": circularity_assessment,
+        "recommendations": recommendations_section,
         "financial_assessment": {
             "total_capex": total_capex or None,
             "total_annual_saving": total_annual_saving or None,
@@ -180,16 +261,12 @@ def build_payload(
                 "intervention_title": r.get("intervention_title"),
                 "payback_years": (r.get("impact") or {}).get("payback_years"),
             }
-            for r in recommendations
+            for r in rec_items
         ],
-        "assumptions": [
-            "Hotspot and recommendation sections are Phase 1 stubs from frozen mocks.",
-            "Scope summary uses the stub fixture total until Module F is live.",
-            "Report labelled DRAFT/INCOMPLETE where factors are UNRESOLVED.",
-        ],
+        "assumptions": assumptions,
         "disclaimer": (
-            "This report contains estimated and stub data. It does not assert regulatory "
-            "compliance and must be reviewed before any external use."
+            "This report is generated from platform data and engine output. It does not "
+            "assert regulatory compliance and must be reviewed before any external use."
         ),
     }
 

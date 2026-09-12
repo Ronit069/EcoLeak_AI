@@ -98,9 +98,14 @@ def create_app() -> FastAPI:
     ):
         app.include_router(router)
 
-    @app.get("/health", tags=["ops"])
+    @app.get("/api/health", tags=["ops"])
     def health() -> dict:
-        return {"status": "ok", "app": settings.app_name, "environment": settings.environment}
+        return {
+            "status": "ok",
+            "app": settings.app_name,
+            "environment": settings.environment,
+            "use_mock_data": settings.use_mock_data,
+        }
 
     return app
 

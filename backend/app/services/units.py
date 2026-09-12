@@ -201,5 +201,5 @@ def normalize(
         conversion_factor=factor,
         conversion_source=CONVERSION_SOURCE,
         dimension=dimension_of(from_unit),
-        converted=from_key != to_expr.strip().lower(),
+        converted=(from_expr != to_expr),
     )

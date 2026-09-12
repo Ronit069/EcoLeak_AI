@@ -47,13 +47,16 @@ def _schema() -> None:
 
 @pytest.fixture(autouse=True)
 def _clean_tables():
+    from app.config import get_settings
     from app.services.ratelimit import reset_rate_limits
 
     table_names = ", ".join(f'"{t.name}"' for t in reversed(Base.metadata.sorted_tables))
     with engine.begin() as conn:
         conn.execute(text(f"TRUNCATE {table_names} RESTART IDENTITY CASCADE"))
     reset_rate_limits()
+    get_settings.cache_clear()
     yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture

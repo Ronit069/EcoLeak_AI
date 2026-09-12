@@ -6,7 +6,6 @@ from typing import Optional
 
 from pydantic import model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import model_validator
 
 
 class Settings(BaseSettings):
@@ -31,6 +30,15 @@ class Settings(BaseSettings):
 
     rate_limit_per_minute: int = 120
     upload_rate_limit_per_minute: int = 10
+
+    # Phase 2 mock-to-real swap gate (shared Phase 2 rule).
+    #   true  (default) -> Module P and the report generator keep Phase 1's
+    #                      known-good mock behavior (instant fallback).
+    #   false           -> Module P pulls live F/G/J/L engine output.
+    # The engine data source DSN can be overridden independently; default is
+    # this app's DATABASE_URL so the engine reads the same P2 tables.
+    use_mock_data: bool = True
+    engine_dsn: Optional[str] = None
 
     # Phase 1 uses a stub auth layer ("stub"); Phase 2 swaps in "jwt".
     auth_mode: str = "stub"

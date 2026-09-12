@@ -349,6 +349,20 @@ def validate_and_build(
             report.rejected_rows += 1
             continue
 
+        if normalization.converted:
+            # INFO example from DB doc section 23: "converted MWh to kWh".
+            report.issues.append(
+                RowIssue(
+                    row_number,
+                    "INFO",
+                    "UNIT_CONVERTED",
+                    f"Converted {normalization.original_value} {normalization.original_unit} "
+                    f"to {normalization.normalized_value} {normalization.normalized_unit}.",
+                    "original_unit",
+                    raw,
+                )
+            )
+
         process_id = process_by_code.get(process_code) if process_code else None
         if process_code and process_id is None:
             report.issues.append(
@@ -531,6 +545,30 @@ def import_activity(
         for activity in report.accepted:
             factor = quality.match_factor(db, activity)
             activity.carbon_data_quality_score = quality.score_activity_record(activity, factor)
+        db.flush()
+
+        # "Every write to activity_data must create an AuditLog entry": one
+        # AUDIT row per accepted imported activity (plus the batch FILE_IMPORT).
+        from app.models.audit import AuditLog
+
+        for activity in report.accepted:
+            db.add(
+                AuditLog(
+                    actor_id=principal.actor_id,
+                    organization_id=facility.organization_id,
+                    event_type="ACTIVITY_IMPORTED",
+                    entity_type="activity_data",
+                    entity_id=activity.id,
+                    new_value={
+                        "import_id": batch.import_id,
+                        "activity_category": activity.activity_category,
+                        "original_value": str(activity.original_value),
+                        "original_unit": activity.original_unit,
+                    },
+                    created_at=utcnow(),
+                )
+            )
+        db.flush()
 
     audit.record(
         db, principal=principal, organization_id=facility.organization_id,
