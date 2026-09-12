@@ -199,3 +199,17 @@ Closures for `docs/phase3/p4_audit.md`. No frozen key renamed/removed.
 | R29 | P4-M3 | Feedback (Q1/Q2) for a recommendation id that is not in the current ranking -> `404 NOT_FOUND` (frozen) | none | `test_p4_m3_feedback_for_unknown_recommendation_is_404` |
 | R30 | P4-L6 | J2 `status`/`rank_max` query params validated -> 422 instead of silent empty 200 | none | `test_p4_l6_invalid_filters_are_422` |
 | R31 | P4-M2 | Q1 superset fields and Q2 `{recommendation_id, latest_state, history}` are the **served** shapes; documented here rather than reshaping (additive; no consumer breakage) | documented | p4_audit §2 P4-M2 |
+
+---
+
+# PHASE 3 ENGINE AUDIT FIXES (branch `phase3-fixes`, ranked list)
+
+Additive `assumptions` keys only — no frozen field changed.
+
+| # | Item | Change | Verification |
+|---|---|---|---|
+| R32 | P3-04 | Electricity ledger classification no longer routes `captive`/bare-`renewable` text to the ONSITE ledger: only genuine on-site self-consumption (on-site/onsite/self-consum/rooftop/behind-the-meter) is kept separate; captive fossil generation is counted (Scope 1/2), purchased renewable is no longer silently zeroed; `ledger_methodology` recorded | `test_p3_04_*` |
+| R33 | P3-02 | Factor `valid_from`/`valid_to` compared to the reporting period; in-window factors preferred; `factor_validity` + penalty recorded | `test_p3_02_*` |
+| R34 | P3-03 | Facility country/state compared to `factor.region_country/state`; region matches preferred; `factor_region_match` = MATCH/GENERIC/NATIONAL_FALLBACK/MISMATCH recorded | `test_p3_03_*` |
+| R35 | P3-06 | Effective confidence = activity confidence − penalties (fallback 15, region mismatch 10 / national fallback 5, out-of-window 10), recorded as `confidence_penalty` / `effective_confidence`; used for `EmissionCalculation.confidence_score` and data-quality weighting | `test_p3_06_*` |
+| R36 | P3-08 | Cost model carries `price_source`/`price_version`/`price_valid_year`, surfaced in every simulation intervention's `assumptions` | `test_p3_08_*` |

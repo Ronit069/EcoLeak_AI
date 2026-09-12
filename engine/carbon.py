@@ -19,7 +19,7 @@ from __future__ import annotations
 
 import re
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from decimal import Decimal
 from typing import Iterable
 
@@ -231,14 +231,49 @@ class CarbonAccountingEngine:
         self.config = config or EngineConfig()
 
     # -- factor selection ---------------------------------------------------
+    @staticmethod
+    def _region_match(
+        factor: EmissionFactor, country: str | None, state: str | None
+    ) -> str:
+        """P3-03: classify factor region specificity against the facility."""
+        fcountry = (factor.region_country or "").strip().lower()
+        fstate = (factor.region_state or "").strip().lower()
+        if not fcountry and not fstate:
+            return "GENERIC"
+        if not country:
+            return "GENERIC"
+        if fcountry == country.strip().lower():
+            if fstate and (not state or fstate != state.strip().lower()):
+                return "NATIONAL_FALLBACK"
+            return "MATCH"
+        return "MISMATCH"
+
+    @staticmethod
+    def _validity(factor: EmissionFactor, period_start: date | None, period_end: date | None) -> str:
+        """P3-02: is the factor valid within the reporting period?"""
+        if factor.valid_from is None and factor.valid_to is None:
+            return "UNKNOWN"
+        if factor.valid_to is not None and period_start is not None and factor.valid_to < period_start:
+            return "OUT_OF_WINDOW"
+        if factor.valid_from is not None and period_end is not None and factor.valid_from > period_end:
+            return "OUT_OF_WINDOW"
+        return "IN_WINDOW"
+
     def select_factor(
-        self, activity: ActivityData, factors: list[EmissionFactor]
-    ) -> tuple[EmissionFactor | None, float, str | None]:
+        self,
+        activity: ActivityData,
+        factors: list[EmissionFactor],
+        *,
+        facility_country: str | None = None,
+        facility_state: str | None = None,
+        period_start: date | None = None,
+        period_end: date | None = None,
+    ) -> tuple[EmissionFactor | None, float, str | None, dict]:
         value = activity.normalized_value if activity.normalized_value is not None else activity.original_value
         if value is None:
-            return None, 0.0, "MISSING_ACTIVITY_VALUE"
+            return None, 0.0, "MISSING_ACTIVITY_VALUE", {}
         if value < 0:
-            return None, 0.0, "NEGATIVE_ACTIVITY"
+            return None, 0.0, "NEGATIVE_ACTIVITY", {}
 
         category = activity.activity_category.value.upper()
         candidates = [
@@ -249,27 +284,51 @@ class CarbonAccountingEngine:
             and compatible_factor_unit(activity.normalized_unit, f.input_unit)
         ]
         if not candidates:
-            return None, 0.0, "EMISSION_FACTOR_NOT_FOUND"
+            return None, 0.0, "EMISSION_FACTOR_NOT_FOUND", {}
 
-        scored: list[tuple[float, int, int, str, EmissionFactor]] = []
+        region_rank = {"MATCH": 3, "GENERIC": 2, "NATIONAL_FALLBACK": 1, "MISMATCH": 0}
+        window_rank = {"IN_WINDOW": 2, "UNKNOWN": 1, "OUT_OF_WINDOW": 0}
+        scored: list[tuple] = []
         for f in candidates:
             sim = max(
                 _overlap(activity.activity_subcategory, f.item_name),
                 _overlap(activity.activity_subcategory, f.subcategory),
                 _overlap(activity.activity_subcategory or "", f.item_name + " " + f.subcategory),
             )
+            region = self._region_match(f, facility_country, facility_state)
+            window = self._validity(f, period_start, period_end)
             year = f.source_year or 0
             version_rank = 1 if f.version else 0
-            scored.append((sim, year, version_rank, f.version, f))
-        scored.sort(key=lambda x: (x[0], x[1], x[2], x[3]), reverse=True)
-        best_sim, _, _, _, best = scored[0]
+            scored.append(
+                (
+                    sim,
+                    region_rank.get(region, 0) if self.config.prefer_region_match else 1,
+                    window_rank.get(window, 1) if self.config.prefer_validity_window else 1,
+                    year,
+                    version_rank,
+                    f.version,
+                    f,
+                    region,
+                    window,
+                )
+            )
+        scored.sort(key=lambda x: x[:6], reverse=True)
+        (best_sim, _, _, _, _, _, best, region, window) = scored[0]
         if best_sim < self.config.factor_match_threshold:
             if len(candidates) == 1 and self.config.allow_single_candidate_fallback:
-                # Only one active factor exists for this category + unit; accept
-                # it as the approved fallback rather than fabricating a value.
-                return best, best_sim, None
-            return None, best_sim, "NO_MATCHING_FACTOR"
-        return best, best_sim, None
+                # Only one active factor for this category + unit; accept it as
+                # the approved fallback but flag it (P3-06 lowers confidence).
+                return best, best_sim, None, {
+                    "match_basis": "SINGLE_CANDIDATE_CATEGORY_UNIT_FALLBACK",
+                    "region": region,
+                    "validity": window,
+                }
+            return None, best_sim, "NO_MATCHING_FACTOR", {}
+        return best, best_sim, None, {
+            "match_basis": "DESCRIPTION_MATCH",
+            "region": region,
+            "validity": window,
+        }
 
     # -- calculation --------------------------------------------------------
     def calculate(
@@ -280,6 +339,8 @@ class CarbonAccountingEngine:
         activity_data: list[ActivityData],
         emission_factors: list[EmissionFactor],
         generated_at: datetime | None = None,
+        period_start: date | None = None,
+        period_end: date | None = None,
     ) -> CarbonInventory:
         now = generated_at or datetime.now(timezone.utc)
         inventory = CarbonInventory(
@@ -311,7 +372,14 @@ class CarbonAccountingEngine:
                 )
                 continue
 
-            factor, score, reason = self.select_factor(activity, emission_factors)
+            factor, score, reason, flags = self.select_factor(
+                activity,
+                emission_factors,
+                facility_country=facility.country,
+                facility_state=facility.state,
+                period_start=period_start,
+                period_end=period_end,
+            )
             if factor is None:
                 inventory.unresolved.append(
                     UnresolvedActivity(
@@ -331,7 +399,24 @@ class CarbonAccountingEngine:
             value = activity.normalized_value if activity.normalized_value is not None else activity.original_value
             assert value is not None
             co2e = q6(to_decimal(value) * factor.total_co2e_factor)  # type: ignore[operator]
-            ledger = self._ledger_for(activity)
+            ledger, ledger_methodology = self._ledger_for(activity)
+            # P3-02/03/06: record the match quality and lower confidence for
+            # weak matches instead of presenting them as exact.
+            penalty = 0.0
+            if flags.get("match_basis") == "SINGLE_CANDIDATE_CATEGORY_UNIT_FALLBACK":
+                penalty += self.config.factor_fallback_penalty
+            region = flags.get("region")
+            if region == "MISMATCH":
+                penalty += self.config.factor_region_mismatch_penalty
+            elif region == "NATIONAL_FALLBACK":
+                penalty += self.config.factor_region_national_fallback_penalty
+            if flags.get("validity") == "OUT_OF_WINDOW":
+                penalty += self.config.factor_validity_penalty
+            effective_confidence = (
+                max(0.0, float(activity.confidence_score) - penalty)
+                if activity.confidence_score is not None
+                else None
+            )
             scope = factor.scope
             assumptions = {
                 "formula": "CO2e = normalized_activity_value * total_co2e_factor",
@@ -345,11 +430,22 @@ class CarbonAccountingEngine:
                 "factor_methodology": factor.methodology,
                 "calculation_version": self.config.calculation_version,
                 "ledger": ledger,
+                "ledger_methodology": ledger_methodology,
                 "match_score": round(score, 4),
-                "factor_match_basis": (
+                "factor_region_match": flags.get("region"),
+                "factor_validity": flags.get("validity"),
+                "confidence_penalty": penalty,
+                "original_confidence": (
+                    str(activity.confidence_score) if activity.confidence_score is not None else None
+                ),
+                "effective_confidence": (
+                    str(Decimal(str(effective_confidence))) if effective_confidence is not None else None
+                ),
+                "factor_match_basis": flags.get(
+                    "match_basis",
                     "DESCRIPTION_MATCH"
                     if score >= self.config.factor_match_threshold
-                    else "SINGLE_CANDIDATE_CATEGORY_UNIT_FALLBACK"
+                    else "SINGLE_CANDIDATE_CATEGORY_UNIT_FALLBACK",
                 ),
             }
             calc = EmissionCalculation(
@@ -361,7 +457,9 @@ class CarbonAccountingEngine:
                 co2e_kg=co2e,
                 calculation_formula="CO2e = normalized_activity_value * total_co2e_factor",
                 assumptions=assumptions,
-                confidence_score=activity.confidence_score,
+                confidence_score=(
+                    Decimal(str(effective_confidence)) if effective_confidence is not None else None
+                ),
                 calculated_at=now,
             )
             inventory.records.append(
@@ -379,8 +477,8 @@ class CarbonAccountingEngine:
                 inventory.exported_electricity_count += 1
             else:
                 weighted_emissions += co2e
-                if activity.confidence_score is not None:
-                    confidence_weighted += co2e * activity.confidence_score
+                if effective_confidence is not None:
+                    confidence_weighted += co2e * Decimal(str(effective_confidence))
                 if factor.confidence_level is not None:
                     factor_quality_weighted += co2e * _LEVEL_SCORE[factor.confidence_level]
 
@@ -400,16 +498,31 @@ class CarbonAccountingEngine:
         }.get(reason or "", "Activity could not be resolved to an emission factor.")
 
     @staticmethod
-    def _ledger_for(activity: ActivityData) -> str:
+    def _ledger_for(activity: ActivityData) -> tuple[str, str]:
+        """P3-04: classify the electricity ledger and record the methodology.
+
+        Only genuine on-site self-consumption goes to the ONSITE ledger (a
+        separate ledger to avoid double counting against purchased grid). The
+        previous substring list routed ANY text containing "solar"/"renewable"
+        AND any "captive" text to ONSITE — silently excluding purchased
+        renewable electricity (market-based) and **captive fossil generation**
+        (which is really Scope 1) from the totals. Captive/bare-renewable rows
+        are now counted in scope (no silent zero).
+        """
         if activity.activity_category.value != "ELECTRICITY":
-            return "SCOPE"
+            return "SCOPE", ""
         text = f"{activity.activity_subcategory} {activity.source_name or ''}".lower()
         if any(k in text for k in ("export", "exported", "feed-in", "feed in", "surplus", "net metering")):
-            return "EXPORT"
-        if any(k in text for k in ("solar", "on-site", "onsite", "self-consum", "captive", "rooftop pv",
-                                   "renewable", "biogas", "wind")):
-            return "ONSITE"
-        return "SCOPE"
+            return "EXPORT", "exported generation ledger (outside purchased totals)"
+        onsite_markers = ("on-site", "onsite", "self-consum", "rooftop", "behind the meter",
+                          "behind-the-meter")
+        if any(k in text for k in onsite_markers):
+            return (
+                "ONSITE",
+                "on-site self-consumption kept in a separate ledger (not counted as "
+                "purchased grid electricity); accounting methodology recorded",
+            )
+        return "SCOPE", ""
 
     @staticmethod
     def _data_quality(

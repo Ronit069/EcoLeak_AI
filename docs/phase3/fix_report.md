@@ -87,3 +87,26 @@ the seed demo.
 | P4-M4..M11, P4-L1..L9 | MEDIUM/LOW | **Open (owner P4)** | `docs/phase3/backlog.md` (methodology/feature scope) |
 
 **Suites after P4 fixes:** root `pytest` **168 passed**; backend on PostgreSQL **80 passed**; `ruff` clean.
+
+---
+
+## 6. Engine ranked-list fixes (P3-02/03/04/06/08)
+
+Closed with tests in `tests/test_phase3_engine_fixes.py` (7 tests):
+
+| Finding | Fix | Evidence |
+|---|---|---|
+| P3-04 | Ledger classification: captive fossil counted (no longer excluded as "on-site"); on-site self-consumption kept separate; purchased renewable not silently zeroed; `ledger_methodology` recorded | `test_p3_04_captive_fossil_is_counted_not_excluded`, `test_p3_04_on_site_self_consumption_and_export_kept_separate` |
+| P3-02 | Validity window vs period; in-window preferred; `factor_validity` + penalty | `test_p3_02_*` |
+| P3-03 | Region match preferred; `factor_region_match` flag + mismatch penalty | `test_p3_03_*` |
+| P3-06 | `effective_confidence` = confidence − penalties (fallback/window/region); drives calc + DQ | `test_p3_06_*` |
+| P3-08 | `price_source`/`price_version`/`price_valid_year` in simulation assumptions | `test_p3_08_*` |
+
+**Suites after engine fixes:** root `pytest` **175 passed**; backend on PostgreSQL **80 passed**; `validate_against_mock` + p3/p4 shape diffs PASS.
+
+**Not solved — P3-07 (must fix before compliance-grade claims):** persisting
+calculations/hotspots and the `CALCULATION_RERUN` audit is a cross-team
+(P3 engine + P2 schema) write-path feature; implementing it as a best-effort
+silent write would violate the project's anti-silent-fallback rule, and it is not
+demo-visible (numbers are deterministic/reproducible). Plan recorded in
+`docs/phase3/backlog.md`.

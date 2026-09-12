@@ -43,3 +43,8 @@ GA-05, GA-06/P3-01, GA-07, P1-01..P1-09, P2-03.
 ### P4 audit follow-up (branch `phase3-fixes`, post PR #8)
 **Closed:** P4-C1 (=GA-01), P4-H2 (=engine_bridge), P4-H1, P4-M1, P4-M3, P4-L6, P4-M2 (documented addendum R31).
 **Still open (owner P4):** P4-M4 (no-feasible-reason envelope), P4-M5 (conflicts/prereqs at K1 seed boundary), P4-M6 (operating hours in explanations), P4-M7 (tariff currency validation), P4-M8 (P4 factor provenance), P4-M9 (pre-generation DQ warning), P4-M10 (recycled-material factor classification), P4-M11 (stub-mode anonymity; shared with GA-02), P4-L1..L5/L7..L9.
+
+### Engine ranked-fix update (branch `phase3-fixes`)
+**Closed:** P3-02 (validity window), P3-03 (region specificity), P3-04 (on-site/captive ledger), P3-06 (fallback/region/window confidence penalty), P3-08 (price provenance).
+**Remaining (the one must-fix-before-compliance item):** **P3-07** — persist `emission_calculations`/`emission_hotspots` and write a `CALCULATION_RERUN` audit row. This is a **cross-team (P3 engine + P2 schema) write path**: the engine is intentionally stateless and the merged engine router has no DB session, so it needs a deliberate persistence hook in the backend (not a best-effort silent write). Not implemented here; plan: (1) backend service persists resolved `emission_calculations` rows by deterministic id on `POST …/calculations`; (2) one `audit_logs` CALCULATION_RERUN per (facility, period); (3) same for hotspots on G1. Live numbers are already deterministic/reproducible, so this is not demo-blocking.
+**Also open:** P3-09..P3-25; P4-M4..M11; GA-03 branch protection (owner admin).

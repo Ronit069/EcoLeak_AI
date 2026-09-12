@@ -130,6 +130,11 @@ class CostModel(_ConfigBase):
     )
     # fallback per category (per normalized unit) when no unit-specific price exists
     category_prices: dict[str, float] = Field(default_factory=dict)
+    # P3-08: provenance for the price assumptions (this is a fixture source, not
+    # a live P2 cost feed — recorded so every "costed" number is traceable).
+    price_source: str = "EcoLeak P4/Module-K demo tariff fixture (static)"
+    price_version: str = "p4-tariff-1.0"
+    price_valid_year: int = 2026
     assumption_note: str = (
         "Static mock resource prices (Phase 1 fixture). Replace with P2 cost data; "
         "annual_saving is unavailable if a targeted activity has no price."
@@ -205,6 +210,16 @@ class EngineConfig(_ConfigBase):
     # approved fallback even if the free-text description does not overlap
     # (requirements Module E: "No exact factor available -> approved fallback").
     allow_single_candidate_fallback: bool = True
+    # P3-02/03/06: preference + confidence penalties for weak matches.
+    # In-window / region-matching factors are preferred; fallback, region
+    # mismatch and out-of-window factors lower the calculation confidence and
+    # are recorded in assumptions (never applied silently at full confidence).
+    prefer_region_match: bool = True
+    prefer_validity_window: bool = True
+    factor_fallback_penalty: float = Field(default=15.0, ge=0, le=100)
+    factor_region_mismatch_penalty: float = Field(default=10.0, ge=0, le=100)
+    factor_region_national_fallback_penalty: float = Field(default=5.0, ge=0, le=100)
+    factor_validity_penalty: float = Field(default=10.0, ge=0, le=100)
     hotspot: HotspotConfig = Field(default_factory=HotspotConfig)
     simulator: SimulatorConfig = Field(default_factory=SimulatorConfig)
     circularity: CircularityConfig = Field(default_factory=CircularityConfig)

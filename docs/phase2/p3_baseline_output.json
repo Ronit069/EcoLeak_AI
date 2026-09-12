@@ -286,6 +286,9 @@
           "static_prices": true,
           "cost_model_note": "Static mock resource prices (Phase 1 fixture). Replace with P2 cost data; annual_saving is unavailable if a targeted activity has no price.",
           "currency": "INR",
+          "price_source": "EcoLeak P4/Module-K demo tariff fixture (static)",
+          "price_version": "p4-tariff-1.0",
+          "price_valid_year": 2026,
           "target_processes": [
             "0a1b2c3d-0006-4006-8006-000000000006"
           ],
@@ -324,6 +327,9 @@
           "static_prices": true,
           "cost_model_note": "Static mock resource prices (Phase 1 fixture). Replace with P2 cost data; annual_saving is unavailable if a targeted activity has no price.",
           "currency": "INR",
+          "price_source": "EcoLeak P4/Module-K demo tariff fixture (static)",
+          "price_version": "p4-tariff-1.0",
+          "price_valid_year": 2026,
           "target_processes": [
             "0a1b2c3d-0004-4004-8004-000000000004"
           ],
