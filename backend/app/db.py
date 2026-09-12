@@ -1,4 +1,4 @@
-"""Database engine, session factory and declarative base (PostgreSQL only)."""
+﻿"""Database engine, session factory and declarative base (PostgreSQL only)."""
 from __future__ import annotations
 
 import uuid
@@ -32,7 +32,15 @@ def new_uuid() -> uuid.UUID:
 
 
 _settings = get_settings()
-engine = create_engine(_settings.database_url, pool_pre_ping=True, future=True)
+# F-4/F-11: fail fast instead of hanging when the database is unreachable
+# (health checks and request handlers must not block for the OS TCP timeout).
+_connect_args = {"connect_timeout": 3} if _settings.database_url.startswith("postgresql") else {}
+engine = create_engine(
+    _settings.database_url,
+    pool_pre_ping=True,
+    future=True,
+    connect_args=_connect_args,
+)
 SessionLocal = sessionmaker(bind=engine, autoflush=False, autocommit=False, expire_on_commit=False)
 
 

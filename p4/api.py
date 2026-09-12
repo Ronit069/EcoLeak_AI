@@ -11,11 +11,12 @@ Mounted by ``backend/app/main.py`` into the single served API.
 from __future__ import annotations
 
 import json
-from decimal import Decimal
+import sys
+from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any, Optional
 
-from fastapi import APIRouter, Body, Query
+from fastapi import APIRouter, Body, Depends, Query
 
 from contracts.schemas import (
     Facility,
@@ -23,15 +24,28 @@ from contracts.schemas import (
     Organization,
     Process,
     RecommendationGenerationResult,
+    RecommendationStatus,
 )
 from engine.api import get_engine
 from engine.serialization import to_jsonable
 from p4.demo.run_demo import _load_json, _resource_factors
 from p4.engine import RecommendationConstraints, generate_with_diagnostics
 from p4.explainability import TemplateExplainer
-from p4.feedback import FeedbackEvent, InMemoryFeedbackStore
+from p4.feedback import FeedbackError, InMemoryFeedbackStore
 from p4.models import FacilityContext, RejectionReasonCode
 from p4.serialization import to_api_dict
+
+# Backend auth/guards live in backend/app; make them importable for BOTH the
+# merged app (uvicorn --app-dir backend) and standalone engine runs.
+_BACKEND_DIR = Path(__file__).resolve().parents[1] / "backend"
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
+
+from app.errors import ConflictError, NotFoundError, PlatformValidationError  # noqa: E402
+from app.guards import (  # noqa: E402  (merged-surface tenant guards, T0-3)
+    facility_tenant_guard,
+    recommendation_tenant_guard,
+)
 
 router = APIRouter(tags=["recommendations"])
 
@@ -65,6 +79,19 @@ def _facility_and_org() -> tuple[Organization, Facility, list[Process]]:
         Facility.model_validate(ds["facilities"][0]),
         [Process.model_validate(item) for item in ds["processes"]],
     )
+
+
+def _require_decimal(value: Any, field: str) -> Optional[Decimal]:
+    """F-13: numeric request fields are 422 in the frozen shape, never 500."""
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError):
+        raise PlatformValidationError(
+            f"{field} must be a valid number.",
+            details={"field": field, "value": str(value)},
+        )
 
 
 def _run_ranker(
@@ -131,6 +158,7 @@ def _dashboard_payload(facility_id: str, reporting_period_id: str) -> dict:
 @router.post(
     "/api/facilities/{facility_id}/reporting-periods/{period_id}/recommendations/generate",
     status_code=202,
+    dependencies=[Depends(facility_tenant_guard)],
 )
 def generate_recommendations(
     facility_id: str,
@@ -141,13 +169,16 @@ def generate_recommendations(
     if body.get("budget_limit") is not None or body.get("constraints"):
         raw = dict(body.get("constraints") or {})
         if body.get("budget_limit") is not None:
-            raw["budget_limit"] = Decimal(str(body["budget_limit"]))
+            raw["budget_limit"] = _require_decimal(body["budget_limit"], "budget_limit")
         constraints = RecommendationConstraints.model_validate(raw)
     result = _run_ranker(facility_id, period_id, constraints)
     return to_api_dict(result)
 
 
-@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/recommendations")
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/recommendations",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def get_recommendations(
     facility_id: str,
     period_id: str,
@@ -155,7 +186,10 @@ def get_recommendations(
     rank_max: Optional[int] = Query(default=None),
 ) -> dict:
     result = _run_ranker(facility_id, period_id, None)
-    items = list(result.recommendations)
+    items = [
+        _with_stored_status(rec)
+        for rec in result.recommendations
+    ]
     if status:
         items = [r for r in items if r.status.value == status]
     if rank_max is not None:
@@ -164,7 +198,65 @@ def get_recommendations(
     return to_api_dict(out)
 
 
-@router.get("/api/recommendations/{recommendation_id}/explanation")
+# Module Q-style decision store for J3 status transitions (in-memory,
+# append-only semantics; SQLAlchemy persistence is Phase-3 backlog, same
+# deferral decision as Q feedback — see docs/phase3/backlog.md).
+_STATUS_STORE: dict[str, str] = {}
+
+_ALLOWED_STATUS_TRANSITIONS: dict[str, set[str]] = {
+    "SUGGESTED": {"SHORTLISTED", "REJECTED", "PLANNED"},
+    "SHORTLISTED": {"PLANNED", "REJECTED"},
+    "PLANNED": {"IMPLEMENTED", "REJECTED"},
+    "REJECTED": set(),
+    "IMPLEMENTED": set(),
+}
+
+
+def _with_stored_status(rec):
+    stored = _STATUS_STORE.get(str(rec.id))
+    if stored is None or stored == rec.status.value:
+        return rec
+    return rec.model_copy(update={"status": RecommendationStatus(stored)})
+
+
+@router.patch(
+    "/api/recommendations/{recommendation_id}",
+    dependencies=[Depends(recommendation_tenant_guard)],
+)
+def update_recommendation(recommendation_id: str, body: dict = Body(default={})) -> dict:
+    """J3: status transition (SUGGESTED -> SHORTLISTED/PLANNED/REJECTED, ...).
+    Unknown status -> 422; invalid transition -> 409; unknown id -> 404 (all
+    frozen shape)."""
+    raw = body.get("status")
+    try:
+        new_status = RecommendationStatus(raw)
+    except ValueError:
+        raise PlatformValidationError(
+            f"Invalid recommendation status {raw!r}.",
+            details={"status": raw, "allowed": [s.value for s in RecommendationStatus]},
+        )
+    context = get_engine().default_context()
+    result = _run_ranker(context["facility_id"], context["reporting_period_id"], None)
+    rec = next((r for r in result.recommendations if str(r.id) == recommendation_id), None)
+    if rec is None:
+        raise NotFoundError(
+            "Recommendation not found.",
+            details={"recommendation_id": recommendation_id},
+        )
+    current = _STATUS_STORE.get(recommendation_id, rec.status.value)
+    if new_status.value != current and new_status.value not in _ALLOWED_STATUS_TRANSITIONS.get(current, set()):
+        raise ConflictError(
+            "Invalid recommendation status transition.",
+            details={"from": current, "to": new_status.value},
+        )
+    _STATUS_STORE[recommendation_id] = new_status.value
+    return to_api_dict(rec.model_copy(update={"status": new_status}))
+
+
+@router.get(
+    "/api/recommendations/{recommendation_id}/explanation",
+    dependencies=[Depends(recommendation_tenant_guard)],
+)
 def recommendation_explanation(recommendation_id: str) -> dict:
     result = _run_ranker(
         get_engine().default_context()["facility_id"],
@@ -173,9 +265,11 @@ def recommendation_explanation(recommendation_id: str) -> dict:
     )
     rec = next((r for r in result.recommendations if str(r.id) == recommendation_id), None)
     if rec is None:
-        from fastapi import HTTPException
-
-        raise HTTPException(status_code=404, detail="recommendation not found")
+        # F-6: use the frozen PlatformError shape, not raw HTTPException.
+        raise NotFoundError(
+            "Recommendation not found.",
+            details={"recommendation_id": recommendation_id},
+        )
     scores = {
         "carbon_saving": rec.carbon_saving_score,
         "financial_return": rec.financial_return_score,
@@ -207,12 +301,18 @@ def recommendation_explanation(recommendation_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/dashboard")
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/dashboard",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def dashboard(facility_id: str, period_id: str) -> dict:
     return _dashboard_payload(facility_id, period_id)
 
 
-@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/leak-map")
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/leak-map",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def leak_map(facility_id: str, period_id: str) -> dict:
     engine = get_engine()
     hotspots: HotspotDetectionResult = engine.hotspot_result(facility_id, period_id)
@@ -233,7 +333,11 @@ def leak_map(facility_id: str, period_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
-@router.post("/api/recommendations/{recommendation_id}/feedback", status_code=201)
+@router.post(
+    "/api/recommendations/{recommendation_id}/feedback",
+    status_code=201,
+    dependencies=[Depends(recommendation_tenant_guard)],
+)
 def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> dict:
     """Q1: capture Useful / Not Applicable / Consider Later / Implemented /
     Rejected feedback with optional actual outcomess. REJECTED requires a
@@ -243,21 +347,35 @@ def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> di
         from engine.errors import MissingParameterError
 
         raise MissingParameterError("feedback_type is required", {"recommendation_id": recommendation_id})
+    reason_code = None
+    if body.get("reason_code"):
+        # F-13: invalid enum input is a 422 in the frozen shape, never a 500.
+        try:
+            reason_code = RejectionReasonCode(body["reason_code"])
+        except ValueError:
+            raise PlatformValidationError(
+                f"Invalid reason_code {body['reason_code']!r}.",
+                details={
+                    "recommendation_id": recommendation_id,
+                    "allowed": [code.value for code in RejectionReasonCode],
+                },
+            )
     event: FeedbackEvent = _feedback_store.submit(
         recommendation_id=recommendation_id,
         feedback_type=feedback_type,
         reason=body.get("reason"),
-        reason_code=(
-            RejectionReasonCode(body["reason_code"]) if body.get("reason_code") else None
-        ),
-        actual_capex=Decimal(str(body["actual_capex"])) if body.get("actual_capex") is not None else None,
-        actual_annual_saving=Decimal(str(body["actual_annual_saving"])) if body.get("actual_annual_saving") is not None else None,
-        actual_co2_saving_kg=Decimal(str(body["actual_co2_saving_kg"])) if body.get("actual_co2_saving_kg") is not None else None,
+        reason_code=reason_code,
+        actual_capex=_require_decimal(body.get("actual_capex"), "actual_capex"),
+        actual_annual_saving=_require_decimal(body.get("actual_annual_saving"), "actual_annual_saving"),
+        actual_co2_saving_kg=_require_decimal(body.get("actual_co2_saving_kg"), "actual_co2_saving_kg"),
     )
     return to_api_dict(event)
 
 
-@router.get("/api/recommendations/{recommendation_id}/feedback")
+@router.get(
+    "/api/recommendations/{recommendation_id}/feedback",
+    dependencies=[Depends(recommendation_tenant_guard)],
+)
 def feedback_history(recommendation_id: str) -> dict:
     """Q2: latest state + full history for a recommendation."""
     events = _feedback_store.history(recommendation_id)

@@ -50,35 +50,35 @@ def create_facility(
 
 @router.get("/organizations/{organization_id}/facilities")
 def list_facilities(
-    organization_id: str,
+    organization_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> list[dict]:
-    access.get_organization(db, UUID(organization_id), principal)
+    access.get_organization(db, organization_id, principal)
     facilities = db.scalars(
-        select(Facility).where(Facility.organization_id == UUID(organization_id))
+        select(Facility).where(Facility.organization_id == organization_id)
     )
     return [facility_to_dict(f) for f in facilities]
 
 
 @router.get("/facilities/{facility_id}")
 def get_facility(
-    facility_id: str,
+    facility_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
-    return facility_to_dict(access.get_facility(db, UUID(facility_id), principal))
+    return facility_to_dict(access.get_facility(db, facility_id, principal))
 
 
 @router.patch("/facilities/{facility_id}")
 def update_facility(
-    facility_id: str,
+    facility_id: UUID,
     payload: FacilityUpdate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> dict:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     before = facility_to_dict(facility)
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(facility, key, value)
@@ -101,13 +101,13 @@ def update_facility(
     status_code=status.HTTP_201_CREATED,
 )
 def create_reporting_period(
-    facility_id: str,
+    facility_id: UUID,
     payload: ReportingPeriodCreate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> dict:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     overlap = db.scalar(
         select(ReportingPeriod).where(
             ReportingPeriod.facility_id == facility.id,
@@ -136,11 +136,11 @@ def create_reporting_period(
 
 @router.get("/facilities/{facility_id}/reporting-periods")
 def list_reporting_periods(
-    facility_id: str,
+    facility_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> list[dict]:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     periods = db.scalars(
         select(ReportingPeriod)
         .where(ReportingPeriod.facility_id == facility.id)

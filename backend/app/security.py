@@ -89,9 +89,12 @@ def get_current_principal(
 ) -> Principal:
     settings = get_settings()
 
-    if settings.auth_mode == "jwt" and authorization:
-        if not authorization.lower().startswith("bearer "):
-            raise UnauthorizedError("Authorization header must be a Bearer token.")
+    if settings.auth_mode == "jwt":
+        # T0-2 fix: JWT mode is strict. A missing or malformed Authorization
+        # header must 401 here — it must never fall through to the stub
+        # header branch (that fallback was a full auth bypass).
+        if not authorization or not authorization.lower().startswith("bearer "):
+            raise UnauthorizedError("Authorization header with a Bearer token is required.")
         claims = decode_access_token(authorization.split(" ", 1)[1].strip())
         return Principal(
             actor_id=_parse_uuid(claims.get("sub"), "sub"),
@@ -99,9 +102,16 @@ def get_current_principal(
             role=claims.get("role", DEFAULT_ROLE),
         )
 
-    # Stub mode: organization header is optional at the auth layer (bootstrap
-    # endpoints such as organization creation have no tenant yet); tenant
-    # ownership is still enforced by the per-endpoint access resolvers.
+    if settings.auth_mode != "stub":
+        raise UnauthorizedError(
+            f"Unsupported AUTH_MODE {settings.auth_mode!r}; expected 'stub' or 'jwt'."
+        )
+
+    # Stub mode (dev/demo): trusted headers. Organization header is optional
+    # at the auth layer (bootstrap endpoints such as organization creation
+    # have no tenant yet); tenant ownership is enforced by per-endpoint
+    # access resolvers and the merged-surface tenant guards. A PRESENT but
+    # wrong org header is rejected by those resolvers/guards.
     if x_role not in ROLES:
         raise UnauthorizedError("Unknown role header value.")
     return Principal(

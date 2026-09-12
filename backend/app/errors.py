@@ -1,6 +1,7 @@
 """Domain exceptions and the frozen safe-error response shape (DB doc section 28)."""
 from __future__ import annotations
 
+import logging
 from typing import Any
 
 from fastapi import FastAPI, Request, status
@@ -8,6 +9,8 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 
 from app.enums import ValidationSeverity
+
+logger = logging.getLogger("ecoleak.errors")
 
 
 def error_payload(
@@ -135,10 +138,20 @@ def register_exception_handlers(app: FastAPI) -> None:
         )
 
     @app.exception_handler(Exception)
-    async def _unhandled(_: Request, exc: Exception) -> JSONResponse:  # pragma: no cover
+    async def _unhandled(request: Request, exc: Exception) -> JSONResponse:  # pragma: no cover
+        # F-14: log the real cause with request context so production
+        # incidents are debuggable; the response stays the frozen safe shape.
+        request_id = getattr(request.state, "request_id", None)
+        logger.exception(
+            "unhandled error path=%s method=%s request_id=%s",
+            request.url.path, request.method, request_id,
+        )
         return JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content=error_payload(
-                "INTERNAL_ERROR", "An unexpected error occurred. Please retry later."
+                "INTERNAL_ERROR",
+                "An unexpected error occurred. Please retry later.",
+                "ERROR",
+                {"request_id": request_id} if request_id else {},
             ),
         )

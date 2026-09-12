@@ -1,0 +1,8 @@
+{
+  "name": "ecoleak-root-tools",
+  "private": true,
+  "description": "Root-level test tooling (K1 UI dual-state probe uses playwright-core from here).",
+  "devDependencies": {
+    "playwright-core": "^1.49.0"
+  }
+}

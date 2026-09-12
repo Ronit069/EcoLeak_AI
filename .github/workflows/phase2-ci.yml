@@ -1,12 +1,14 @@
-name: Phase 2 CI — PostgreSQL-gated suites
+﻿name: EcoLeak CI
 
 on:
   push:
-    branches: [main, phase2-fixes]
+    branches: [main, phase2-fixes, phase3-readiness]
   pull_request:
+  workflow_dispatch:
 
 jobs:
   postgres-suite:
+    name: Backend + engine suites (PostgreSQL 16 service)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -32,10 +34,10 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Install backend + root requirements
+      - name: Install pinned environment (requirements.lock)
         run: |
-          python -m pip install -q -r backend/requirements.txt
-          python -m pip install -q -r requirements.txt
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -r requirements.lock
 
       - name: Backend PG-gated suite (contract parity, schema constraints, ingestion volume, audit, double counting, Module P real)
         working-directory: backend
@@ -56,13 +58,14 @@ jobs:
           python tools/phase2_p3_shape_diff.py
           python tools/phase2_p4_shape_diff.py
 
-      - name: Frontend build
+      - name: Frontend build (tsc --noEmit + vite)
         working-directory: frontend
         run: |
           npm ci --no-audit --no-fund
           npm run build
 
   K1-adversarial:
+    name: K1 red/green adversarial (fixed + broken dual-state)
     runs-on: ubuntu-latest
     env:
       USE_MOCK_DATA: "false"
@@ -74,11 +77,16 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: 20
-      - name: Install root deps + playwright chromium
+      - name: Install python deps (repo root)
         run: |
-          python -m pip install -q -r requirements.txt -r backend/requirements.txt
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -r requirements.lock
+      - name: Install root test tooling (playwright-core) at repo root
+        run: |
           npm ci --no-audit --no-fund
           npx playwright-core install chromium --only-shell
+      - name: Install node deps (frontend/)
+        run: npm ci --no-audit --no-fund
         working-directory: frontend
       - name: Seed fixed + broken DBs, build both UI variants (fresh, no caches)
         run: |
@@ -91,16 +99,16 @@ jobs:
           # env-baking guard: the baked URL must exist in each bundle
           python - <<'PY2'
           import glob
-          fixed = open(glob.glob('frontend/dist/assets/index-*.js')[0], encoding='utf-8', errors='ignore').read()
-          broken = open(glob.glob('frontend/dist-broken/assets/index-*.js')[0], encoding='utf-8', errors='ignore').read()
+          fixed = open(glob.glob('dist/assets/index-*.js')[0], encoding='utf-8', errors='ignore').read()
+          broken = open(glob.glob('dist-broken/assets/index-*.js')[0], encoding='utf-8', errors='ignore').read()
           assert 'localhost:8000' in fixed and 'localhost:8001' not in fixed, 'FIXED bundle env-baking broken'
           assert 'localhost:8001' in broken and 'localhost:8000' not in broken, 'BROKEN bundle env-baking broken'
           print('env baking guard PASS')
           PY2
       - name: Start fixed (:8000) + broken (:8001) APIs and proxy-free static servers
         run: |
-          USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8000 &
-          USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak_broken.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8001 &
+          CORS_ALLOW_ORIGINS="http://localhost:5174,http://localhost:5175" USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8000 &
+          CORS_ALLOW_ORIGINS="http://localhost:5174,http://localhost:5175" USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak_broken.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8001 &
           node tests/static_server.mjs frontend/dist 5174 &
           node tests/static_server.mjs frontend/dist-broken 5175 &
           sleep 10
@@ -108,14 +116,15 @@ jobs:
         run: |
           # fixed: MUST pass
           node tests/k1_strict.mjs http://localhost:8000
-          # broken: MUST fail (red) — invert to make CI red/green visible
+          # broken: MUST fail (red) â€” invert to make CI red/green visible
           if node tests/k1_strict.mjs http://localhost:8001 2>/dev/null; then
             echo "FAIL: broken backend must NOT pass strict checks"; exit 1
           fi
           # UI: fixed shows engine label, broken shows fallback label
           node tests/k1_ui.mjs
 
-  P2 migration + seed smoke:
+  p2_migration_and_seed_smoke:
+    name: P2 migration + seed smoke (PostgreSQL 16 service)
     runs-on: ubuntu-latest
     services:
       postgres:
@@ -140,8 +149,8 @@ jobs:
           python-version: "3.11"
       - name: Install
         run: |
-          python -m pip install -q -r backend/requirements.txt
-          python -m pip install -q -r requirements.txt
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -r requirements.lock
       - name: Alembic upgrade + full 19-intervention seed + engine-over-PG smoke
         working-directory: backend
         run: |
@@ -160,3 +169,21 @@ jobs:
           assert len(src.get_interventions()) == 19
           print("PG smoke OK: op =", inv.operational_kgco2e, "| interventions =", len(src.get_interventions()))
           PY
+
+  lint-and-naive-pytest:
+    name: Lint + naive pytest entrypoint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install
+        run: |
+          python -m pip install -q --upgrade pip
+          python -m pip install -q -r requirements.lock
+      - name: Backend ruff gate
+        working-directory: backend
+        run: python -m ruff check app
+      - name: Root suite via configured testpaths (naive pytest)
+        run: python -m pytest -q
