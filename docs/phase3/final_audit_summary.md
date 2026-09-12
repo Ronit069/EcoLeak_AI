@@ -130,3 +130,25 @@ live demo but blocking for *compliance-grade* claims (P3-07, P3-06, GA-03).
 CRITICAL/HIGH) and apply branch protection (GA-03). **Before any compliance
 claim:** close P3-07, P3-04, P3-02/P3-03, P3-06. Everything else is a documented
 known limitation with an owner in `docs/phase3/backlog.md`.
+
+---
+
+## 5. Update — ranked fixes applied (branch `phase3-fixes`, commit `d341b17`)
+
+**Now closed** (see `fix_report.md` §6, tests in `tests/test_phase3_engine_fixes.py`):
+**P3-04** (on-site/captive ledger), **P3-02** (validity window), **P3-03** (region
+specificity), **P3-06** (confidence penalties), **P3-08** (price provenance — now
+sourced/versioned *and* still labelled `data_is_stub`).
+
+**Still open, in ranked order:**
+1. **P3-07** (HIGH, G4) — **the one must-fix-before-compliance item**: persist
+   calculations/hotspots + `CALCULATION_RERUN` audit. Cross-team P3+P2 write path;
+   not demo-visible; plan in `backlog.md`. Deliberately **not** implemented as a
+   best-effort silent write.
+2. **GA-03** (HIGH, process) — branch protection still unapplied (owner-admin).
+3. **P2-01** residual (stub-only; blocked by GA-02).
+4. **P3-09…P3-25 / P4-M4…M11 / LOWs** — methodology/feature backlog.
+
+**Suites:** root `pytest` **175 passed**, backend on PostgreSQL **80 passed**,
+mock + shape gates PASS. No unsolved *errors* remain; the open items are
+unimplemented capability (P3-07) and process/admin (GA-03).
