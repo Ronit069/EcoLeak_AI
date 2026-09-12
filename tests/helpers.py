@@ -21,6 +21,10 @@ from p4.contracts import (  # noqa: E402
     Organization,
     Process,
 )
+from p4.data_source import (  # noqa: E402
+    load_facility_dataset,
+    resource_factors_from_factors,
+)
 from p4.engine import EngineRun, generate_with_diagnostics  # noqa: E402
 from p4.explainability import TemplateExplainer  # noqa: E402
 from p4.library import InterventionLibrary  # noqa: E402
@@ -246,3 +250,155 @@ def make_evidence(**overrides) -> ExplanationEvidence:
     }
     data.update(overrides)
     return ExplanationEvidence.model_validate(data)
+
+
+# ---------------------------------------------------------------------------
+# Phase 2: live P3 hotspot source over the P2 SQLite image + LLM test doubles
+# ---------------------------------------------------------------------------
+
+REAL_FACTORS_PATH = PROJECT_ROOT / "backend" / "app" / "seed" / "real_factors.json"
+REAL_FACILITY_ID = "0a1b2c3d-0002-4002-8002-000000000002"
+REAL_PERIOD_ID = "0a1b2c3d-0003-4003-8003-000000000003"
+
+
+def real_sqlite_engine(*, factors_path: Optional[Path] = None):
+    """P3 engine over the portable SQLite image of P2 tables (real factors).
+
+    Mirrors tools/phase2_p3_shape_diff.py so P4 exercises the same
+    ``USE_MOCK_DATA=false`` data path P2 uses in production.
+    """
+
+    import tempfile
+
+    from sqlalchemy import create_engine
+
+    from engine.service import EcoLeakEngine
+    from engine.sql_source import SQLActivityDataSource
+    from tests.test_sql_source import _seed
+
+    factors = _load(factors_path or REAL_FACTORS_PATH)
+    tmp = Path(tempfile.mkdtemp(prefix="p4_phase2_")) / "ecoleak.sqlite3"
+    sql_engine = create_engine(f"sqlite+pysqlite:///{tmp}", future=True)
+    _seed(sql_engine, factors=factors)
+    return EcoLeakEngine(data_source=SQLActivityDataSource(sql_engine))
+
+
+@lru_cache(maxsize=1)
+def real_rank_inputs() -> dict:
+    """Everything the P4 ranker needs, sourced from the live (SQL) engine."""
+
+    engine = real_sqlite_engine()
+    context = engine.default_context()
+    hotspots = engine.hotspot_result(context["facility_id"], context["reporting_period_id"])
+    organization, facility, processes = load_facility_dataset(engine, context["facility_id"])
+    factors = resource_factors_from_factors(
+        engine.data_source.get_emission_factors(), region_country=facility.country
+    )
+    return {
+        "engine": engine,
+        "hotspots": hotspots,
+        "organization": organization,
+        "facility": facility,
+        "processes": processes,
+        "context": demo_context(),
+        "factors": factors,
+    }
+
+
+def baseline_rank_inputs() -> dict:
+    """Everything the P4 ranker needs, sourced from the Phase 1 mock fixtures."""
+
+    dataset = _load(MOCKS_DIR / "mock_dataset.json")
+    return {
+        "hotspots": hotspot_envelope(),
+        "organization": Organization.model_validate(dataset["organization"]),
+        "facility": Facility.model_validate(dataset["facilities"][0]),
+        "processes": [Process.model_validate(item) for item in dataset["processes"]],
+        "context": demo_context(),
+        "factors": demo_emission_factors(),
+    }
+
+
+def run_real_engine(
+    *,
+    explainer=None,
+    constraints: Optional[RecommendationConstraints] = None,
+    hotspots=None,
+) -> EngineRun:
+    """Run the P4 ranker against the live P3 hotspot envelope (real factors)."""
+
+    inputs = real_rank_inputs()
+    return generate_with_diagnostics(
+        hotspots or inputs["hotspots"],
+        inputs["facility"],
+        organization=inputs["organization"],
+        processes=inputs["processes"],
+        context=inputs["context"],
+        emission_factors=inputs["factors"],
+        constraints=constraints,
+        explainer=explainer or TemplateExplainer(),
+        clock=lambda: FIXED_NOW,
+    )
+
+
+def evidence_aware_llm(prompt: str) -> str:
+    """Fake LLM that echoes only stored evidence values (should always pass)."""
+
+    payload = json.loads(prompt)
+    evidence = payload["evidence"]
+    code = evidence["intervention_code"]
+    parts = []
+    if evidence.get("hotspot_contribution_percent") is not None:
+        parts.append(
+            f"The targeted hotspot contributes {evidence['hotspot_contribution_percent']}% "
+            "of operational emissions."
+        )
+    if evidence.get("estimated_co2_saving_kg") is not None:
+        parts.append(
+            f"Estimated saving is {evidence['estimated_co2_saving_kg']} kgCO2e per year."
+        )
+    parts.append(
+        f"Confidence {evidence['confidence_score']} of 100; treats estimates as uncertain."
+    )
+    return json.dumps({"explanation": " ".join(parts), "cited_intervention_codes": [code]})
+
+
+def injected_llm(code: str = "INT-HACK"):
+    """Fake LLM that follows a prompt injection and cites an unknown code."""
+
+    def _fn(prompt: str) -> str:
+        return json.dumps(
+            {
+                "explanation": f"{code} gives guaranteed 100% savings.",
+                "cited_intervention_codes": [code],
+            }
+        )
+
+    return _fn
+
+
+def contradict_then_valid_llm(contradiction: str = "99 years"):
+    """First attempt per intervention contradicts evidence, second is valid.
+
+    Returns a callable with ``.contradicted_codes`` / ``.valid_calls`` stats so
+    callers can assert the reject-and-regenerate path fired for every item.
+    """
+
+    calls = {"contradicted": set(), "valid": 0}
+
+    def _fn(prompt: str) -> str:
+        evidence = json.loads(prompt)["evidence"]
+        code = evidence["intervention_code"]
+        if code not in calls["contradicted"]:
+            calls["contradicted"].add(code)
+            return json.dumps(
+                {
+                    "explanation": f"This intervention pays back in {contradiction}.",
+                    "cited_intervention_codes": [code],
+                }
+            )
+        calls["valid"] += 1
+        return evidence_aware_llm(prompt)
+
+    _fn.stats = calls  # type: ignore[attr-defined]
+    return _fn

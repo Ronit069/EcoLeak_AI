@@ -1,16 +1,24 @@
-"""Run the full textile SME demo through the P4 engine (offline, deterministic).
+"""Run the full textile SME demo through the P4 engine (deterministic).
 
-    python -m p4.demo.run_demo
+    python -m p4.demo.run_demo                      # mock hotspots (default)
+    python -m p4.demo.run_demo --use-mock-data false  # live P3 hotspots (needs DSN)
 
-Loads the frozen Phase 0 fixtures (organization, facility, processes, hotspot
-envelope) plus the P4 demo context (resource baselines, tariffs), generates
-recommendations, verifies the output shape against
-mocks/mock_recommendation_output.json, and writes demo artifacts under
-p4/demo/output/.
+Phase 2: the hotspot input is flag-gated via ``p4.data_source`` (shared
+``USE_MOCK_DATA`` rule). Default behavior is the Phase 1 mock fixture so
+``main`` stays demo-able with zero DB dependencies. Live mode reads P3's
+Engine G output over the flag-selected data source, derives the P4 estimator
+factors from the live versioned factor KB, and writes a separate artifact
+(``demo_recommendation_output.live.json``) so the mock demo output is never
+overwritten.
+
+Both modes verify the output shape against
+``mocks/mock_recommendation_output.json`` and write explanations under
+``p4/demo/output/``.
 """
 
 from __future__ import annotations
 
+import argparse
 import json
 import sys
 from pathlib import Path
@@ -21,19 +29,24 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from p4.contracts import (  # noqa: E402
     Facility,
-    HotspotDetectionResult,
     Organization,
     Process,
     RecommendationGenerationResult,
 )
+from p4.data_source import (  # noqa: E402
+    load_facility_dataset,
+    load_hotspots,
+    resource_factors_from_dataset,
+    resource_factors_from_factors,
+)
 from p4.engine import generate_with_diagnostics  # noqa: E402
 from p4.explainability import TemplateExplainer  # noqa: E402
-from p4.serialization import to_api_dict  # noqa: E402
 from p4.models import (  # noqa: E402
     FacilityContext,
     RecommendationConstraints,
     ResourceEmissionFactors,
 )
+from p4.serialization import to_api_dict  # noqa: E402
 
 MOCKS_DIR = PROJECT_ROOT / "mocks"
 OUTPUT_DIR = Path(__file__).resolve().parent / "output"
@@ -69,34 +82,63 @@ def _shape_diff(left, right, path: str = "$") -> list[str]:
     return problems
 
 
-FACTOR_CODE_FIELDS = {
-    "EF-ELEC-GRID-IN-2023": "electricity_per_kwh",
-    "EF-FUEL-NG-M3-2006": "natural_gas_per_m3",
-    "EF-FUEL-DIESEL-L-2006": "diesel_per_litre",
-    "EF-WATER-SUPPLY-M3-2020": "water_per_m3",
-    "EF-WASTE-TEXTILE-LF-KG-2023": "waste_per_kg",
-    "EF-MAT-LDPE-KG-2021": "packaging_per_kg",
-}
-
-
 def _resource_factors(dataset: dict) -> ResourceEmissionFactors:
-    values: dict[str, str] = {}
-    for factor in dataset["emission_factors"]:
-        field = FACTOR_CODE_FIELDS.get(factor["factor_code"])
-        if field:
-            values[field] = factor["total_co2e_factor"]
-    return ResourceEmissionFactors.model_validate(values)
+    """Mock-dataset estimator factors (kept stable: P2's bridge imports this)."""
+
+    return resource_factors_from_dataset(dataset)
 
 
-def main() -> int:
+def _mock_inputs() -> tuple[Organization, Facility, list[Process], ResourceEmissionFactors]:
     dataset = _load_json(MOCKS_DIR / "mock_dataset.json")
-    organization = Organization.model_validate(dataset["organization"])
-    facility = Facility.model_validate(dataset["facilities"][0])
-    processes = [Process.model_validate(item) for item in dataset["processes"]]
-    hotspots = HotspotDetectionResult.model_validate(
-        _load_json(MOCKS_DIR / "mock_hotspot_output.json")
+    return (
+        Organization.model_validate(dataset["organization"]),
+        Facility.model_validate(dataset["facilities"][0]),
+        [Process.model_validate(item) for item in dataset["processes"]],
+        _resource_factors(dataset),
     )
+
+
+def _live_inputs(engine, facility_id) -> tuple[Organization | None, Facility, list[Process], ResourceEmissionFactors]:
+    organization, facility, processes = load_facility_dataset(engine, str(facility_id))
+    factors = resource_factors_from_factors(
+        engine.data_source.get_emission_factors(), region_country=facility.country
+    )
+    return organization, facility, processes, factors
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(description="EcoLeak AI P4 demo runner")
+    parser.add_argument(
+        "--use-mock-data",
+        choices=("true", "false", "legacy"),
+        default="legacy",
+        help="Hotspot source gate: true=mock, false=live P3, legacy=env/DSN rule",
+    )
+    args = parser.parse_args(argv)
+    explicit = {"true": True, "false": False, "legacy": None}[args.use_mock_data]
+
+    hotspot_source = load_hotspots(use_mock_data=explicit, fallback_to_mock=True)
+    for warning in hotspot_source.warnings:
+        print(f"WARNING: {warning}")
+    hotspots = hotspot_source.envelope
+    if hotspot_source.source == "live":
+        organization, facility, processes, factors = _live_inputs(
+            hotspot_source.engine, hotspots.facility_id
+        )
+        output_path = OUTPUT_DIR / "demo_recommendation_output.live.json"
+    else:
+        organization, facility, processes, factors = _mock_inputs()
+        output_path = OUTPUT_DIR / "demo_recommendation_output.json"
+
     context = FacilityContext.model_validate(_load_json(Path(__file__).parent / "demo_context.json"))
+    if str(context.facility_id) != str(facility.id) or str(context.reporting_period_id) != str(
+        hotspots.reporting_period_id
+    ):
+        print(
+            "WARNING: demo_context.json is keyed to the demo facility/period; "
+            "financial estimates are incomplete for this dataset"
+        )
+        context = None
 
     run = generate_with_diagnostics(
         hotspots,
@@ -104,7 +146,7 @@ def main() -> int:
         organization=organization,
         processes=processes,
         context=context,
-        emission_factors=_resource_factors(dataset),
+        emission_factors=factors,
         constraints=RecommendationConstraints(
             budget_limit=5_000_000,
             region_country="India",
@@ -126,10 +168,10 @@ def main() -> int:
     RecommendationGenerationResult.model_validate(generated)
 
     OUTPUT_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = OUTPUT_DIR / "demo_recommendation_output.json"
     output_path.write_text(json.dumps(generated, indent=2), encoding="utf-8")
 
     print()
+    print(f"Hotspot source: {hotspot_source.source}")
     print(f"Baseline: {hotspots.total_emissions_kgco2e:,.0f} kgCO2e "
           f"(scope {', '.join(scope.value for scope in hotspots.scope_boundary)}), "
           f"data quality {hotspots.data_quality_score}")
@@ -157,12 +199,18 @@ def main() -> int:
         for warning in run.diagnostics.warnings:
             print("  -", warning)
 
-    explanations_path = OUTPUT_DIR / "demo_explanations.md"
+    explanations_path = OUTPUT_DIR / (
+        "demo_explanations.live.md"
+        if hotspot_source.source == "live"
+        else "demo_explanations.md"
+    )
     lines = [
         "# EcoLeak AI demo - recommendation explanations",
         "",
+        f"Hotspot source: {hotspot_source.source}",
         f"Baseline operational emissions: {hotspots.total_emissions_kgco2e:,.0f} kgCO2e "
-        f"(Scope 1+2), data quality {hotspots.data_quality_score}/100.",
+        f"({', '.join(scope.value for scope in hotspots.scope_boundary)}), "
+        f"data quality {hotspots.data_quality_score}/100.",
         "",
     ]
     for rec in run.result.recommendations:

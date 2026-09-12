@@ -1,5 +1,10 @@
 # P4 — AI Recommendation, Explainability & Demo (Phase 1)
 
+> **Phase 2:** the hotspot input is now swapped to P3's live Engine G output
+> behind the shared `USE_MOCK_DATA` flag (mock remains the default and instant
+> fallback). See `docs/phase2/p4_integration_log.md`, `docs/phase2/p4_shape_diff.md`,
+> and run `python -m tools.phase2_p4_shape_diff`.
+
 Callable, dependency-light Python package implementing Modules I, J, M, Q plus the
 full textile SME demo and the Module J/K edge-case suite. The frozen Phase 0
 contracts in `contracts/` and `mocks/` were **not modified** (`python validate_mocks.py`

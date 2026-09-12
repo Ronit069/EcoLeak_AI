@@ -1,6 +1,7 @@
 # EcoLeak AI demo - recommendation explanations
 
-Baseline operational emissions: 565,050 kgCO2e (Scope 1+2), data quality 78.4/100.
+Hotspot source: mock
+Baseline operational emissions: 565,050 kgCO2e (SCOPE_1, SCOPE_2), data quality 78.4/100.
 
 ## #1 INT-SCRAP-004 - Textile offcut collection and recycled yarn recovery (score 77.26)
 

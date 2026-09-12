@@ -66,3 +66,33 @@ from the real-data run is field-for-field identical to the mock baseline
 
 No response envelope, field name, enum value, or endpoint path changed. No
 dependency or consumer of P3's JSON output is affected.
+
+---
+
+# P4 — Phase 2 (branch `Ronit`)
+
+**Status: NO frozen contract changes.**
+
+P4 swapped the recommendation engine's hotspot input to P3's live Engine G
+output behind the shared `USE_MOCK_DATA` gate (mock remains the default). The
+J2/M1 response envelope is field-for-field identical to the mock baseline
+(`docs/phase2/p4_shape_diff.md`), so P1 and P2 need no changes.
+
+## Additive-only changes (no existing shape altered)
+
+| Area | Change | Old shape | New shape | Reason |
+|---|---|---|---|---|
+| Config | `USE_MOCK_DATA` / `ECOLEAK_USE_MOCK_DATA` resolution in `p4.data_source` | mock-only hotspot loader | explicit flag + mock fallback | shared Phase 2 mock-to-real rule |
+| Bootstrap | `p4.data_source.load_hotspots(...)` returns `HotspotSource(envelope, source, engine, warnings)` | — | new helper type | provenance + instant rollback |
+| Estimator | `resource_factors_from_factors(..., region_country=...)` + `factor_selection_notes()` | factor-code map | priority-based selection + ambiguity report | no silent factor pick among ties |
+| Artifacts | `docs/phase2/p4_baseline_output.json`, `p4_real_data_output.json`, `p4_shape_diff.md`; `tools/phase2_p4_shape_diff.py` | — | new files | baseline regression + shape proof |
+| Tests | `tests/test_p4_phase2_integration.py` (20) | — | new tests | flag gate, live source, J/M guardrails on real data |
+| Imports | `p4/contracts.py` now imports `contracts.schemas` | second `schemas` module | shared module identity | fixes `isinstance` across P3→P4; no field change |
+
+No response envelope, field name, enum value, or endpoint path changed. P1's
+dashboard and P2's report consumer require no changes.
+
+**Notifications:** P2 — two optional non-blocking actions logged in
+`docs/phase2/p4_integration_log.md` §11 (seed Scope-3 factors; resolve the DEFRA
+diesel blend/mineral tie or mark a preferred factor). P1 — no change; live-mode
+severity labels differ from the frozen mock (pre-existing Phase 1 B3 decision).

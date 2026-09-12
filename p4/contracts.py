@@ -1,8 +1,10 @@
 """Import shim for the frozen Phase 0 contracts package.
 
-The contracts directory intentionally has no __init__.py (it is a shared
-artifact tree, not a Python package). P4 imports the frozen models from here
-so every other module can do `from p4.contracts import ...`.
+P4, P2 and P3 must share the *same* frozen model classes, so this shim imports
+via ``contracts.schemas`` (the way ``engine/*`` and ``backend/*`` do) instead
+of loading a second ``schemas`` module. Dual module identity would make
+``isinstance``/``model_validate`` behave inconsistently when P3 objects flow
+into the P4 ranker.
 """
 
 from __future__ import annotations
@@ -10,14 +12,15 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-_CONTRACTS_DIR = Path(__file__).resolve().parent.parent / "contracts"
-if str(_CONTRACTS_DIR) not in sys.path:
-    sys.path.insert(0, str(_CONTRACTS_DIR))
+_REPO_ROOT = Path(__file__).resolve().parent.parent
+if str(_REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(_REPO_ROOT))
 
-from schemas import (  # noqa: E402,F401
+from contracts.schemas import (  # noqa: E402,F401
     ActivityCategory,
     CircularIntervention,
     ConfidenceLevel,
+    EmissionFactor,
     Facility,
     FeedbackType,
     HotspotDetectionResult,
