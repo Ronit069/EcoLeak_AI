@@ -85,6 +85,18 @@ def context() -> dict:
 
 
 @router.get(
+    "/api/engine/facilities/{facility_id}/reporting-periods",
+    dependencies=[Depends(facility_tenant_guard)],
+)
+def list_periods_for_facility(facility_id: str) -> list[dict]:
+    """P1-09: reporting periods for a facility (facility selector support).
+    Distinct path: A9 (P2 router) serves the same resource from PostgreSQL;
+    this engine-resolved variant works without a database, so the selector
+    can populate on any deployment (mock/SQLite/PG). Additive, ignore-safe."""
+    return _json(get_engine().data_source.list_reporting_periods(facility_id))
+
+
+@router.get(
     "/api/facilities/{facility_id}/reporting-periods/{period_id}/inventory-summary",
     dependencies=[Depends(facility_tenant_guard)],
 )
@@ -167,6 +179,19 @@ def circularity_score(facility_id: str, period_id: str) -> dict:
     return _json(get_engine().circularity_score(facility_id, period_id).to_dict())
 
 
+def _library_intervention(intervention_id: str):
+    """Resolve an intervention id against the frozen P4 library (GA-06)."""
+    from seed_interventions import load_library_contracts
+
+    try:
+        for entry in load_library_contracts():
+            if str(entry.id) == intervention_id or entry.intervention_code == intervention_id:
+                return entry
+    except Exception:
+        return None
+    return None
+
+
 @router.post(
     "/api/scenarios/{scenario_id}/simulate",
     dependencies=[Depends(simulate_tenant_guard)],
@@ -191,6 +216,13 @@ def simulate(scenario_id: str, body: dict = Body(default={})) -> dict:
             iv = interventions.get(str(item["intervention_id"]))
         if iv is None and item.get("intervention_code"):
             iv = interventions_by_code.get(item["intervention_code"])
+        if iv is None:
+            # GA-06 fix: the P4 intervention library (19 entries) is the
+            # canonical id space the J2 ranker emits, but the engine's data
+            # source may only know its own seeded subset (mock = 5). Resolve
+            # library-only ids from the shared frozen library so K1 works on
+            # the DEFAULT (mock) path too — never a silent 404 -> fallback.
+            iv = _library_intervention(str(item.get("intervention_id")) or "")
         if iv is None:
             raise EntityNotFoundError(
                 f"Unknown intervention: {item}",

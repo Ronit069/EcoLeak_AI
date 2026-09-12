@@ -64,3 +64,17 @@ action). Every previously-⚠️ item in this closure carries the required
 before/after evidence pair; suites: root 189 passed, backend PG 80/80,
 O-suite 9/9, gaps-suite 5/5, remediation 4/4, k1-pure 12/12, shape gates 9/9,
 and a zero-console-error demo walkthrough.
+
+---
+
+## 6. Audit-findings closure (second wave — `fix-audit-open-findings`)
+
+| Finding | Fix | Before | After |
+|---|---|---|---|
+| **P1-01 HIGH** scope-mixing headline | Labels now DERIVED from data source: N1-live → "TOTAL FOOTPRINT (ALL SCOPES)" + per-scope sub-line (S1/S2/S3 + operational); derived → "TOTAL EMISSIONS (SCOPE 1+2)"; page header states "All scopes (S1+S2+S3)" | gauge said ALL SCOPES while header said S1+S2 (live probe) | DOM: `TOTAL FOOTPRINT (ALL SCOPES)` + `All scopes (Scope 1 + 2 + 3)` + `S3 … operational (S1+S2)` all true |
+| **P1-04 MEDIUM** 5xx CORS/security/request-id | Verified by forced-500 probe: for configured origins, 500 now carries nosniff/DENY/CSP/`X-Request-Id`/ACAO + frozen body; non-allowlisted origins correctly get no ACAO. Permanent regression test added | test RED (`access-control-allow-origin` absent for 5174 — non-allowlisted) | test GREEN (5173 allowed → all headers present) `tests/test_remediation.py::test_p104_*` |
+| **P1-09 MEDIUM** facility selector | `GET /api/engine/facilities/{id}/reporting-periods` (engine-resolved, works without PG; distinct from A9) + facility/period `<select>`s bound to `fetchFacilityPeriods` (+localStorage selection persisted) | no selector (single-facility UI) | DOM: selector renders `[1,1]` options, zero JS errors |
+| **GA-06 LOW** mock-path K1 library ids | `_library_intervention()` in `engine/api.py` resolves library-only ids from the frozen P4 library on the DEFAULT mock path; unknown ids still typed-404 | mock-path K1 with `…0016` → 404 | → 200 with `assessment` (TestClient, default mock source); permanent test added |
+| **GA-07 LOW** `/docs/audit/` | pointer `docs/audit/README.md` listing every audit artifact location | absent | present |
+
+Residual (already owned, unchanged): O-panel UI nitpick (scenario mgmt is API+CLI only — P1 Phase-4 if the demo needs it), store persistence (P2/P3 Phase-4), Sankey/waterfall/MAC (P1 Phase-4).

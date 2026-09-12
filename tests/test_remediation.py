@@ -79,3 +79,37 @@ def test_q2_feedback_history_shape() -> None:
     r = client.get(f"/api/recommendations/{rid}/feedback")
     assert r.status_code == 200
     assert set(r.json().keys()) == {"recommendation_id", "latest_state", "history"}
+
+def test_p104_five_hundred_carries_security_cors_request_id_headers() -> None:
+    """P1-04 verification: a REAL 500 must still carry X-Content-Type-Options,
+    X-Frame-Options, X-Request-Id and CORS allow-origin, so a browser can read
+    the frozen error body instead of failing opaque-ERR_FAILED."""
+    from starlette.responses import JSONResponse
+
+    # Temporarily register a route that always bubbles an unhandled exception
+    # (worst case for header attachment — goes through the 500 handler).
+    @app.get("/__test_forced_500__")
+    async def _boom():  # pragma: no cover - test route
+        raise RuntimeError("forced P1-04 probe")
+
+    try:
+        # Allowed origin (the configured CORS list) — P1-04: a real 500 must
+        # behave like any other response for a configured origin: CORS +
+        # security + request-id headers, readable frozen body, never opaque.
+        r = client.get(
+            "/__test_forced_500__",
+            headers={"Origin": "http://localhost:5173"},
+        )
+        assert r.status_code == 500, r.text
+        assert r.headers.get("x-content-type-options") == "nosniff"
+        assert r.headers.get("x-frame-options") == "DENY"
+        assert r.headers.get("content-security-policy", "").startswith("default-src")
+        assert r.headers.get("x-request-id"), "X-Request-Id must be present on 5xx"
+        assert r.headers.get("access-control-allow-origin") == "http://localhost:5173", (
+            "CORS header must be present on 5xx for a configured origin (audit P1-04)"
+        )
+        body = r.json()
+        assert body.get("error_code") == "INTERNAL_ERROR"
+        assert set(body.keys()) == {"error_code", "message", "severity", "details"}
+    finally:
+        app.routes[:] = [route for route in app.routes if getattr(route, "path", None) != "/__test_forced_500__"]

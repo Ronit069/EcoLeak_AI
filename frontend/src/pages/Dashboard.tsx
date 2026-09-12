@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react'
 import {
   fetchActivities, fetchBootstrapIds, fetchDashboard, fetchDataset,
+  fetchFacilityPeriods,
   fetchHotspots, fetchProcesses, fetchRecommendations, resetFallbacks,
   setFacilitySelection,
   subscribeFallbacks, subscribeMockMode, DEMO_IDS, type BootstrapIds,
-  type DashboardPayload, type GroupResult, type Source,
+  type DashboardPayload, type FacilityPeriod, type GroupResult, type Source,
 } from '../lib/api'
 import type {
   HotspotDetectionResult, MockDataset, RecommendationGenerationResult,
@@ -26,6 +27,8 @@ export interface Phase1Data {
   processes: MockDataset['processes'] | null
   activities: MockDataset['activity_data'] | null
   ids: BootstrapIds
+  facilities: MockDataset['facilities']
+  facilityPeriods: FacilityPeriod[]
   sources: Record<string, Source | 'derived'>
   error: string | null
   ready: boolean
@@ -36,11 +39,11 @@ export interface Phase1Data {
  * endpoint group live-first with per-group mock fallback (auto mode).
  * One endpoint failing never blanks the UI — it falls back per group.
  */
-export function usePhase1Data() {
+export function usePhase1Data(selection?: { facility_id?: string; reporting_period_id?: string }) {
   const [data, setData] = useState<Phase1Data>({
     dataset: null, hotspots: null, recs: null, dashboard: null,
-    processes: null, activities: null, ids: DEMO_IDS,
-    sources: {}, error: null, ready: false,
+    processes: null, activities: null, ids: DEMO_IDS, facilities: [],
+    facilityPeriods: [], sources: {}, error: null, ready: false,
   })
 
   useEffect(() => {
@@ -52,8 +55,15 @@ export function usePhase1Data() {
       try {
         const datasetR = await fetchDataset()
         seen.dataset = datasetR.source
-        const ids = await fetchBootstrapIds()
+        const baseIds = await fetchBootstrapIds()
+        // P1-09: user selection overrides bootstrap ids (facility selector)
+        const ids: BootstrapIds = {
+          organization_id: baseIds.organization_id,
+          facility_id: selection?.facility_id ?? baseIds.facility_id,
+          reporting_period_id: selection?.reporting_period_id ?? baseIds.reporting_period_id,
+        }
 
+        const periodRows = await fetchFacilityPeriods(ids.facility_id)
         const [hotspotsR, recsR, processesR, activitiesR, dashboardR] = await Promise.allSettled([
           fetchHotspots(ids.facility_id, ids.reporting_period_id),
           fetchRecommendations(ids.facility_id, ids.reporting_period_id),
@@ -84,6 +94,8 @@ export function usePhase1Data() {
           processes: processesR.status === 'fulfilled' ? processesR.value.data : datasetR.data.processes,
           activities: activitiesR.status === 'fulfilled' ? activitiesR.value.data : datasetR.data.activity_data,
           ids,
+          facilities: datasetR.data.facilities,
+          facilityPeriods: periodRows,
           sources: seen,
           error: null,
           ready: true,
@@ -98,6 +110,8 @@ export function usePhase1Data() {
           processes: mock?.data.processes ?? null,
           activities: mock?.data.activity_data ?? null,
           ids: DEMO_IDS,
+          facilities: mock?.data.facilities ?? [],
+          facilityPeriods: [],
           sources: seen,
           error: err instanceof Error ? err.message : String(err),
           ready: true,
@@ -109,7 +123,7 @@ export function usePhase1Data() {
     const unsub1 = subscribeFallbacks(() => { if (live) setData(d => ({ ...d })) })
     const unsub2 = subscribeMockMode(() => { if (live) run() })
     return () => { live = false; unsub1(); unsub2() }
-  }, [])
+  }, [selection?.facility_id, selection?.reporting_period_id])
 
   return data
 }
@@ -123,7 +137,17 @@ export function Loading() {
 }
 
 export function DashboardPage() {
-  const { dataset, hotspots, recs, dashboard, error, sources, ids } = usePhase1Data()
+  const [sel, setSel] = useState<{ facility_id?: string; reporting_period_id?: string }>({})
+  const { dataset, hotspots, recs, dashboard, error, sources, ids, facilities, facilityPeriods } =
+    usePhase1Data(sel)
+  const changeFacility = (facilityId: string) => {
+    setFacilitySelection(facilityId)
+    setSel({ facility_id: facilityId })
+  }
+  const changePeriod = (periodId: string) => {
+    setFacilitySelection(ids.facility_id, periodId)
+    setSel(s => ({ ...s, facility_id: ids.facility_id, reporting_period_id: periodId }))
+  }
   if (error) return <div className="notice"><b>Failed to load.</b> {error} — using cached/demo data where available.</div>
   if (!hotspots || !recs || !dataset) return <Loading />
 
@@ -147,10 +171,16 @@ export function DashboardPage() {
   }
   const facility = dataset.facilities.find(f => f.id === ids.facility_id) ?? dataset.facilities[0]
   const period = dataset.reporting_periods.find(p => p.id === ids.reporting_period_id) ?? dataset.reporting_periods[0]
-  const scopeLabel =
-    hotspots.scope_boundary?.length > 0
-      ? hotspots.scope_boundary.join(' + ').replace(/_/g, ' ')
-      : 'Scope 1 + 2 (default boundary)'
+  // P1-01 (final): the boundary of the headline number is now explicit and
+  // DERIVED from the data source, never assumed:
+  //   N1 live  -> all-scope footprint (S1+S2+S3)
+  //   derived  -> operational boundary (Scope 1+2, the hotspot denominator)
+  const isAllScope = dashboard != null
+  const scopeLabel = isAllScope
+    ? 'All scopes (Scope 1 + 2 + 3)'
+    : (hotspots.scope_boundary?.length > 0
+        ? hotspots.scope_boundary.join(' + ').replace(/_/g, ' ')
+        : 'Scope 1 + 2 (default boundary)')
   // P1-01: the N1 total includes Scope 3; hotspot shares are relative to the
   // operational (Scope 1+2) boundary. Keep both visible so neither is misread.
   const operationalKg = hotspots.total_emissions_kgco2e
@@ -167,6 +197,37 @@ export function DashboardPage() {
 
   return (
     <>
+      {facilities.length > 0 && facilityPeriods.length > 0 && (
+        <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap', marginBottom: 12 }} aria-label="Facility and period selector">
+          <label style={{ fontSize: '.8rem' }}>
+            Facility
+            <select
+              value={ids.facility_id}
+              onChange={e => changeFacility(e.target.value)}
+              style={{ marginLeft: 8, font: 'inherit', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--line-strong)' }}
+            >
+              {facilities.map(f => (
+                <option key={f.id} value={f.id}>{f.name}</option>
+              ))}
+            </select>
+          </label>
+          <label style={{ fontSize: '.8rem' }}>
+            Period
+            <select
+              value={ids.reporting_period_id}
+              onChange={e => changePeriod(e.target.value)}
+              style={{ marginLeft: 8, font: 'inherit', padding: '5px 8px', borderRadius: 8, border: '1px solid var(--line-strong)' }}
+            >
+              {facilityPeriods.map(p => (
+                <option key={p.id} value={p.id}>{p.period_type} {p.start_date} → {p.end_date} ({p.status})</option>
+              ))}
+            </select>
+          </label>
+          <span style={{ fontSize: '.74rem', color: 'var(--legend)' }}>
+            Data for {facilities.length} facilit{(facilities.length === 1 ? 'y' : 'ies')} × {facilityPeriods.length} period{(facilityPeriods.length === 1 ? '' : 's')} (P1-09)
+          </span>
+        </div>
+      )}
       {actionable && (
         <div role="status" className="notice" style={{ border: '1px solid var(--accent)', marginBottom: 14 }}>
           <b>Best intervention target: {actionable.process_name ?? 'process'} (rank {actionable.rank})</b>
@@ -205,9 +266,14 @@ export function DashboardPage() {
 
       <div className="instrument-strip panel" role="region" aria-label="Key instruments" style={{ marginBottom: 18 }}>
         <div className="gauge">
-          <div className="gauge-label">TOTAL EMISSIONS (ALL SCOPES)</div>
+          <div className="gauge-label">{isAllScope ? 'TOTAL FOOTPRINT (ALL SCOPES)' : 'TOTAL EMISSIONS (SCOPE 1+2)'}</div>
           <div className="gauge-value">{fmtTonnes(dash.total_kgco2e)}</div>
-          <div className="gauge-sub">{fmtKg(dash.total_kgco2e)} · Scope 1+2 {fmtKg(operationalKg)} · {dash.empty_state ? 'no data yet' : 'computed'}</div>
+          <div className="gauge-sub">
+            {isAllScope
+              ? `S1 ${fmtKg(dashboard?.scope_breakdown.SCOPE_1 ?? 0)} · S2 ${fmtKg(dashboard?.scope_breakdown.SCOPE_2 ?? 0)} · S3 ${fmtKg(dashboard?.scope_breakdown.SCOPE_3 ?? 0)} · operational (S1+S2) ${fmtKg(operationalKg)}`
+              : `${fmtKg(dash.total_kgco2e)} · hotspot shares use this same denominator`}
+            {' '}· {dash.empty_state ? 'no data yet' : 'computed'}
+          </div>
         </div>
         <div className="gauge">
           <div className="gauge-label">CARBON INTENSITY</div>
