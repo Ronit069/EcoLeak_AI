@@ -132,7 +132,7 @@ Hotspot score (Req doc §20): `w1(Carbon Contribution) + w2(Carbon Intensity) + 
 |---|---|---|---|---|
 | H1 | `POST /api/facilities/{facility_id}/anomalies/detect` | `{ process_id?: UUID, reporting_period_id: UUID, model_version?: str }` | `{ anomalies: [{ id, process_id, activity_data_id, model_name, model_version, anomaly_score, threshold, is_anomaly, explanation, confidence_score, detected_at }] }` | AuthN, AuthZ, tenant ownership, payload schema, "insufficient history" business rule, audit, safe errors |
 | H2 | `GET /api/facilities/{facility_id}/reporting-periods/{period_id}/anomalies` | — | `AnomalyResult[]` | AuthN, tenant ownership, safe errors |
-| H3 | `POST /api/anomalies/{anomaly_id}/acknowledge` | `{ acknowledged: true, note?: str }` | `204` | AuthN, AuthZ, tenant ownership, audit, safe errors |
+| H3 | `PATCH /api/anomalies/{anomaly_id}/acknowledge` | `{ acknowledged: true, note?: str }` | `200 {note, acknowledged_at, facility_id, reporting_period_id}` | AuthN, AuthZ, tenant ownership (resolved BEFORE any write), audit, safe errors |
 
 ML only (IsolationForest); with too little history the engine must return rules-only results
 without an ML certainty claim.
@@ -209,6 +209,17 @@ Circularity rule (Module L): score outside `0..100` is rejected/capped.
 | Q1 | `POST /api/recommendations/{recommendation_id}/feedback` | `RecommendationFeedback` (`feedback_type`, `reason`, `actual_*`) | `201 RecommendationFeedback` | AuthN, AuthZ, tenant ownership, payload schema, spam/rate-limit validation, physical-plausibility flag, audit, safe errors |
 | Q2 | `GET /api/recommendations/{recommendation_id}/feedback` | — | `RecommendationFeedback[]` (latest state + history) | AuthN, tenant ownership, safe errors |
 
+
+> **Phase 3 final-gap addendum (Module O — now served by `p4/o_routes.py`):**
+> `POST /api/facilities/{id}/scenarios` (O1, 201 `Scenario`) · `GET /api/facilities/{id}/scenarios` (O2, `{scenarios: Scenario[]}`) ·
+> `GET /api/scenarios/{id}` (O3, `{scenario, scenario_interventions[]}`) · `PATCH /api/scenarios/{id}` (O4) ·
+> `DELETE /api/scenarios/{id}` (O5, 204 soft) · `POST /api/scenarios/{id}/interventions` (O6, 201 `ScenarioIntervention`; duplicate + adoption 0..100 guards) ·
+> `DELETE /api/scenarios/{id}/interventions/{sid}` (O7, 204) ·
+> `POST /api/scenarios/{id}/clone` (201, independent copy) · `POST /api/scenarios/{id}/restore` (reverts to creation-time baseline) ·
+> `GET /api/scenarios/compare?scenario_ids=a,b` (K3: `{comparisons: [], deltas: {}}` over the K1 engine; at least 2 ids).
+> All routes AuthN + tenant ownership (facility -> organization, resolved before any write); store is session-scoped,
+> persistence Phase-4 backlog (owner P2). Scenario shapes are the frozen `Scenario` / `ScenarioIntervention` models.
+
 ---
 
 ## Cross-cutting rules
@@ -223,3 +234,5 @@ Circularity rule (Module L): score outside `0..100` is rejected/capped.
 - **HTTP status codes:** `201` create, `202` accepted async job, `204` delete, `400/422`
   validation, `401/403` auth, `404` not found, `409` conflict/duplicate, `429` rate limited,
   `5xx` generic error only — never stack traces.
+
+> **Phase 3 final-gap addendum (H2):** `GET /api/facilities/{facility_id}/reporting-periods/{period_id}/anomalies` returns the latest stored detection with per-anomaly `acknowledged` / `acknowledged_note` / `acknowledged_at` merged (session-scoped registry; persistence is Phase-4 backlog, owner P3).

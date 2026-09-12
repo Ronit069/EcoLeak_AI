@@ -46,7 +46,9 @@ from app.routers import (
 from engine.api import router as engine_router  # noqa: E402  (path bootstrap above)
 from engine.errors import CarbonPlatformError  # noqa: E402
 from p4.api import router as p4_router  # noqa: E402
+from p4.o_routes import router as o_router  # noqa: E402
 from p4.feedback import FeedbackError  # noqa: E402
+from p4.scenarios import ScenarioError  # noqa: E402
 
 logger = logging.getLogger("ecoleak.api")
 
@@ -128,6 +130,14 @@ def create_app() -> FastAPI:
                 content=error_payload("FEEDBACK_VALIDATION", str(exc), "ERROR", {}),
             )
 
+        @app.exception_handler(ScenarioError)
+        async def _scenario_domain(_: Request, exc: ScenarioError) -> JSONResponse:
+            status = {"NOT_FOUND": 404, "FORBIDDEN": 403, "TOO_MANY": 429}.get(exc.code, 422)
+            return JSONResponse(
+                status_code=status,
+                content=error_payload(exc.code, exc.message, "ERROR", exc.details),
+            )
+
         _registered_carbon_handler = True
 
     for router in (
@@ -150,6 +160,10 @@ def create_app() -> FastAPI:
     )
     app.include_router(
         p4_router,
+        dependencies=[Depends(get_current_principal)],
+    )
+    app.include_router(
+        o_router,
         dependencies=[Depends(get_current_principal)],
     )
 

@@ -484,6 +484,7 @@ class DashboardResponse(StrictBaseModel):
     carbon_intensity: Optional[Decimal] = None
     production_unit: Optional[str] = Field(default=None, max_length=30)
     largest_hotspot: Optional[dict[str, Any]] = None
+    top_actionable_hotspot_id: Optional[UUID] = None
     circularity_score: Optional[Decimal] = Field(default=None, ge=0, le=100)
     potential_reduction_kgco2e: Decimal = Field(ge=0)
     potential_annual_saving: Optional[Decimal] = None

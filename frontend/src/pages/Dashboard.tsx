@@ -15,6 +15,7 @@ import { RecommendationPlate } from '../components/RecommendationPlate'
 import { SeverityBadge } from '../components/badges'
 import { DrillMap } from '../components/DrillMap'
 import { Pareto } from '../components/Pareto'
+import { ScopeDonut } from '../components/ScopeDonut'
 import { deriveDashboard } from '../lib/api'
 
 export interface Phase1Data {
@@ -159,8 +160,21 @@ export function DashboardPage() {
       ? `${(((dash.potential_reduction_kgco2e ?? 0) / dash.total_kgco2e) * 100).toFixed(1)}% of baseline`
       : 'baseline unavailable'
 
+  const actionableId = dashboard?.top_actionable_hotspot_id ?? null
+  const actionable = actionableId
+    ? (hotspots.hotspots.find(h => h.id === actionableId) ?? null)
+    : null
+
   return (
     <>
+      {actionable && (
+        <div role="status" className="notice" style={{ border: '1px solid var(--accent)', marginBottom: 14 }}>
+          <b>Best intervention target: {actionable.process_name ?? 'process'} (rank {actionable.rank})</b>
+          {' '}— the largest leak ({dash.largest_hotspot?.process_name ?? '—'}) is NOT automatically the best
+          action target; {actionable.process_name ?? 'it'} has the highest improvement potential
+          ({actionable.improvement_potential_score ?? '—'}/100).
+        </div>
+      )}
       <div className="page-head">
         <div>
           <h1>Carbon leak bench</h1>
@@ -239,6 +253,8 @@ export function DashboardPage() {
             </p>
             <DrillMap dataset={dataset} hotspots={hotspots} />
             <Pareto items={hotspots.hotspots} />
+            <h4 style={{ margin: '14px 0 6px' }}>Scope breakdown</h4>
+            <ScopeDonut breakdown={dashboard?.scope_breakdown} total={dash.total_kgco2e} />
             <details>
               <summary className="link" style={{ cursor: 'pointer', fontSize: '.85rem' }}>Sequential rail + tabular fallback</summary>
               <div className="leak-rail">

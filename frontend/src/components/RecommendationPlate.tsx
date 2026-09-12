@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type { RecommendationOutputItem } from '../lib/contracts'
 import { fmtINR, fmtTonnes, fmtYears } from '../lib/format'
+import { fmtCostPerTonne } from '../lib/format'
 import { ScoreMeter } from './badges'
 
 export function RecommendationPlate({ rec }: { rec: RecommendationOutputItem }) {
@@ -36,6 +37,7 @@ export function RecommendationPlate({ rec }: { rec: RecommendationOutputItem }) 
         <div role="cell"><span>Annual saving</span><b>{fmtINR(impact?.estimated_annual_saving)}</b></div>
         <div role="cell"><span>CO₂ saving</span><b>{fmtTonnes(impact?.estimated_co2_saving_kg)}</b></div>
         <div role="cell"><span>Payback</span><b>{fmtYears(impact?.payback_years)}</b></div>
+        <div role="cell"><span>Cost per tCO₂e</span><b>{fmtCostPerTonne(impact?.cost_per_tonne_co2_avoided)}</b></div>
       </div>
       <div className="rec-actions">
         <button
