@@ -1,6 +1,8 @@
 """Module A1-A3: organization endpoints."""
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import APIRouter, Depends, Request, status
 from sqlalchemy.orm import Session
 
@@ -42,27 +44,25 @@ def create_organization(
 
 @router.get("/organizations/{organization_id}")
 def get_organization(
-    organization_id: str,
+    organization_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
-    from uuid import UUID
 
-    organization = access.get_organization(db, UUID(organization_id), principal)
+    organization = access.get_organization(db, organization_id, principal)
     return organization_to_dict(organization)
 
 
 @router.patch("/organizations/{organization_id}")
 def update_organization(
-    organization_id: str,
+    organization_id: UUID,
     payload: OrganizationUpdate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*ADMIN_ROLES)),
 ) -> dict:
-    from uuid import UUID
 
-    organization = access.get_organization(db, UUID(organization_id), principal)
+    organization = access.get_organization(db, organization_id, principal)
     before = organization_to_dict(organization)
     for key, value in payload.model_dump(exclude_unset=True).items():
         setattr(organization, key, value)

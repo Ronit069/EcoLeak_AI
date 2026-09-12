@@ -77,11 +77,11 @@ def lookup_factor(
 
 @router.get("/emission-factors/{factor_id}")
 def get_factor(
-    factor_id: str,
+    factor_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
-    return factor_service.factor_to_dict(factor_service.get_factor(db, UUID(factor_id)))
+    return factor_service.factor_to_dict(factor_service.get_factor(db, factor_id))
 
 
 @router.post(
@@ -111,13 +111,13 @@ def create_factor(
     status_code=status.HTTP_201_CREATED,
 )
 def create_new_version(
-    factor_id: str,
+    factor_id: UUID,
     payload: EmissionFactorCreate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*ADMIN_ROLES)),
 ) -> dict:
-    old_factor = factor_service.get_factor(db, UUID(factor_id))
+    old_factor = factor_service.get_factor(db, factor_id)
     new_factor = factor_service.create_new_version(
         db, old_factor, payload.model_dump(), actor_id=principal.actor_id
     )
