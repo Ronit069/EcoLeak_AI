@@ -183,7 +183,7 @@ p { max-width: 72ch; }
 .meter { height: 6px; background: var(--ash-deep); border: 1px solid var(--line); border-radius: 999px; overflow: hidden; margin-top: 3px; }
 .meter i { display: block; height: 100%; background: #2A2721; }
 .impact-strip {
-  display: grid; grid-template-columns: repeat(4, minmax(0,1fr));
+  display: grid; grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));
   border-top: 1px solid var(--line); background: var(--ash-deep);
   font-size: .8rem;
 }

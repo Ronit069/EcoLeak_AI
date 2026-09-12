@@ -110,7 +110,8 @@ def _run_ranker(
 def _dashboard_payload(facility_id: str, reporting_period_id: str) -> dict:
     engine = get_engine()
     inventory = engine.calculate_inventory(facility_id, reporting_period_id)
-    hotspots: HotspotDetectionResult = engine.hotspot_result(facility_id, reporting_period_id)
+    analysis = engine.detect_hotspots(facility_id, reporting_period_id)
+    hotspots: HotspotDetectionResult = analysis.result
     ranking = _run_ranker(facility_id, reporting_period_id, None)
     potential_reduction = Decimal("0")
     potential_saving = Decimal("0")
@@ -131,6 +132,7 @@ def _dashboard_payload(facility_id: str, reporting_period_id: str) -> dict:
         "largest_hotspot": (
             to_jsonable(hotspots.hotspots[0]) if hotspots.hotspots else None
         ),
+        "top_actionable_hotspot_id": analysis.top_actionable_hotspot_id,
         "circularity_score": circularity.total_score,
         "potential_reduction_kgco2e": potential_reduction,
         "potential_annual_saving": potential_saving,

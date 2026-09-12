@@ -317,6 +317,7 @@ export interface DashboardPayload {
   scope_breakdown: Record<string, number>
   carbon_intensity: number | null
   production_unit?: string | null  // formally accepted Phase-2 additive key
+  top_actionable_hotspot_id?: string | null  // best intervention target (G engine; dist. from largest_hotspot)
   largest_hotspot: unknown | null
   circularity_score: number | null
   potential_reduction_kgco2e: number

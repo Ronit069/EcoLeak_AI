@@ -17,3 +17,5 @@ export const fmtYears = (v: number | null | undefined) =>
   v == null ? 'No payback' : `${num1.format(v)} yr`
 export const fmtScore = (v: number | null | undefined) =>
   v == null ? '—' : num1.format(v)
+export const fmtCostPerTonne = (v: number | null | undefined) =>
+  v == null ? '—' : `${inr.format(v)} / tCO₂e avoided`

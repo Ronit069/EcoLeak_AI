@@ -213,3 +213,15 @@ Additive `assumptions` keys only — no frozen field changed.
 | R34 | P3-03 | Facility country/state compared to `factor.region_country/state`; region matches preferred; `factor_region_match` = MATCH/GENERIC/NATIONAL_FALLBACK/MISMATCH recorded | `test_p3_03_*` |
 | R35 | P3-06 | Effective confidence = activity confidence − penalties (fallback 15, region mismatch 10 / national fallback 5, out-of-window 10), recorded as `confidence_penalty` / `effective_confidence`; used for `EmissionCalculation.confidence_score` and data-quality weighting | `test_p3_06_*` |
 | R36 | P3-08 | Cost model carries `price_source`/`price_version`/`price_valid_year`, surfaced in every simulation intervention's `assumptions` | `test_p3_08_*` |
+
+---
+
+# Phase 3 FINAL-GAP CLOSURE (branch `phase3-final-gaps`)
+
+| # | Item | Change | Contract impact | Verification |
+|---|---|---|---|---|
+| F1 | N1 + `top_actionable_hotspot_id` | additive key on dashboard payload; field added to `DashboardResponse` (schemas.py) + api_contract N1 row | additive, ignore-safe | `tests/test_phase3_gaps.py::test_fix1_*`; value cross-checked == engine `detect_hotspots().top_actionable_hotspot_id` |
+| F2 | H2 `GET .../anomalies` + H3 `PATCH /api/anomalies/{id}/acknowledge` | new routes on merged engine surface; session-scoped registry (persistence Phase-4, owner P3); tenant resolved BEFORE any write (H3) | additive; api_contract H2 note + H3 updated (PATCH, 200) | `test_fix2_*`: roundtrip ack, cross-tenant 403, unknown 404, frozen shapes |
+| F3 | K cost-per-tonne rendered in P1 | UI-only (field already in `impact`) | none | BEFORE: absent in DOM; AFTER: ₹15,625 shown == API value |
+| F4 | N scope donut in P1 | UI-only, consumes live N1 `scope_breakdown`; no backend change (matrix premise verified) | none | BEFORE/AFTER screenshots; sr table + non-color legend |
+| F5=Item5 | Module O CRUD + clone + restore + K3 compare | Full module now served (`p4/o_routes.py` + `p4/scenarios.py`); routes listed in api_contract addendum; auth+tenant from day one | additive endpoints on frozen models | `tests/test_phase3_scenarios.py` 9/9: CRUD, clone independence, restore, dup/adoption guards, cross-tenant 403, compare deltas |

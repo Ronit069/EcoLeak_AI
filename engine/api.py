@@ -43,6 +43,7 @@ from app.errors import PlatformValidationError  # noqa: E402
 from app.guards import (  # noqa: E402  (merged-surface tenant guards, T0-3)
     context_tenant_guard,
     facility_tenant_guard,
+    get_current_principal, Principal,
     simulate_tenant_guard,
 )
 
@@ -250,6 +251,34 @@ def detect_anomalies(facility_id: str, body: dict = Body(default={})) -> dict:
         period_id = engine.default_context()["reporting_period_id"]
     result = engine.anomalies(facility_id, period_id)
     return _json(result.to_dict())
+
+
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/anomalies",
+    dependencies=[Depends(facility_tenant_guard)],
+)
+def get_anomalies_history(facility_id: str, period_id: str) -> dict:
+    """H2: history endpoint — latest stored detection for facility/period,
+    with per-anomaly acknowledged state merged in (P3 final-gap closure)."""
+    return _json(get_engine().list_anomalies(facility_id, period_id))
+
+
+@router.patch("/api/anomalies/{anomaly_id}/acknowledge")
+def acknowledge_anomaly(
+    anomaly_id: str,
+    body: dict = Body(default={}),
+    principal: Principal = Depends(get_current_principal),
+) -> dict:
+    """H3: confirmation-before-correction gate. Tenant ownership is verified
+    BEFORE any state is written (anomaly -> facility -> organization)."""
+    from fastapi import Depends as _D, Body as _B  # noqa (already imported)
+
+    facility_id = get_engine().resolve_anomaly_facility(anomaly_id)
+    facility = get_engine().data_source.get_facility(facility_id)
+    if facility is None:
+        raise EntityNotFoundError("Unknown facility", {"facility_id": facility_id})
+    principal.assert_org(facility.organization_id)
+    return _json(get_engine().acknowledge_anomaly(anomaly_id, note=body.get("note")))
 
 
 def _json(value: Any) -> Any:
