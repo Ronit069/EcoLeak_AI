@@ -1,6 +1,7 @@
 # Node / frontend (aryan)
 frontend/node_modules/
 frontend/dist/
+node_modules/
 
 # Python / pytest (Ronit + Mahima)
 __pycache__/
