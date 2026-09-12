@@ -138,13 +138,26 @@ export function ReportsPage() {
               <p style={{ fontSize: '.9rem' }}>Total score: <b>{quality?.total_score ?? '—'}</b> / 100</p>
               <h3>Factor provenance ({provenance.length})</h3>
               <ul style={{ fontSize: '.8rem' }}>
-                {provenance.slice(0, 8).map((p, i) => (
-                  <li key={i}>
-                    {p.status === 'UNRESOLVED'
-                      ? <b>UNRESOLVED — {p.activity_category} ({p.normalized_unit})</b>
-                      : `${p.factor_code} · ${p.source_name ?? 'source?'} ${p.source_year ?? ''} · v${p.version ?? '?'}`}
-                  </li>
-                ))}
+                {/* BUG-4-09: unresolved rows are appended last by the bridge; surface
+                    them first so the notice points at rows the judge can actually see. */}
+                {[...provenance.filter(p => p.status === 'UNRESOLVED'), ...provenance.filter(p => p.status !== 'UNRESOLVED')].slice(0, 8).map((p, i) => {
+                  if (p.status === 'UNRESOLVED') {
+                    // BUG-4-01: the live payload nests category/subcategory under
+                    // `details` (engine_bridge.to_issue()); the mock path has
+                    // top-level activity_category/normalized_unit. Read both.
+                    const details = (p.details ?? {}) as Record<string, unknown>
+                    const category = p.activity_category ?? details.activity_category ?? 'activity'
+                    const unit = p.normalized_unit ?? details.normalized_unit
+                    const subcategory = details.activity_subcategory
+                    const suffix = unit ? ` (${String(unit)})` : subcategory ? ` · ${String(subcategory)}` : ''
+                    return <li key={i}><b>UNRESOLVED — {String(category)}{suffix}</b></li>
+                  }
+                  return (
+                    <li key={i}>
+                      {`${p.factor_code} · ${p.source_name ?? 'source?'} ${p.source_year ?? ''} · v${p.version ?? '?'}`}
+                    </li>
+                  )
+                })}
               </ul>
               <h3>Recommendations section</h3>
               <p style={{ fontSize: '.86rem' }}>status: <b>{recs?.status ?? '—'}</b>{recs?.note ? ` · ${recs.note}` : ''}</p>

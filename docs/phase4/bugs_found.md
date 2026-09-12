@@ -11,6 +11,9 @@ in this branch (`phase4-p4`), and it is called out as FIXED below.
 | BUG-4-03 | LOW | Explanations | Stale/awkward copy in the deterministic explanation template | **FIXED (copy-only, this branch)** |
 | BUG-4-04 | LOW | Dashboard vs K1 | "Potential saving" on the dashboard is a standalone sum; K1 is interaction-aware — different numbers | OPEN — display semantics; script explains |
 | BUG-4-05 | LOW | Demo artifact | Committed live artifact uses fixture baselines while the API derives baselines from activity data (<1% delta) | OPEN — owner P4 |
+| BUG-4-06 | **HIGH** | Dashboard (live mode) | Clicking a process bar in the Carbon Leak Map crashes the page (activity-level reads `dataset.activity_data`, absent in live mode) | **FIXED (read-path wiring, this branch)** |
+| BUG-4-08 | **HIGH (demo) / MEDIUM (logic)** | K1 simulator | CAPEX does not scale with adoption; adoption=0 keeps the capital cost, so sliders can never fit a scenario to budget | OPEN — owner P3 (logged, not fixed) |
+| BUG-4-09 | MEDIUM | Reports (live mode) | Provenance list slices the first 8 rows while unresolved rows are appended last, hiding the very rows the notice points to | **FIXED (ordering, this branch)** |
 
 Already-fixed Phase-3 P4 findings (not re-logged, cross-ref `docs/phase3/final_audit_summary.md`):
 P4-C1/GA-01 (non-demo facility 500s), P4-H1 (negative-net recycling crash), P4-H2 (Module P mock
@@ -87,6 +90,76 @@ while the merged API's `build_facility_context` aggregates resource baselines fr
 **Effect:** P1/P4 referencing the artifact may quote numbers a few rupees off from the live app.
 **Suggested fix:** add an API-path artifact generator (or document the artifact as
 fixture-context only). Owner: P4, later pass.
+
+## BUG-4-06 — HIGH — Carbon Leak Map activity drill crashes in live mode (FIXED here)
+
+**Location:** `frontend/src/pages/Dashboard.tsx` (passes only `dataset` to `DrillMap`) +
+`frontend/src/components/DrillMap.tsx:96` (`dataset.activity_data.filter(...)`).
+
+**What's wrong:** live mode bootstraps `dataset` from `GET /api/context`
+(`frontend/src/lib/api.ts::fetchDataset`), whose payload has no `activity_data` field
+(only `organization`, `facilities`, `reporting_periods`). Clicking a process bar switches
+the map to activity level, `dataset.activity_data` is `undefined`, the `.filter` call
+throws, and React unmounts the dashboard. Mock mode is unaffected (frozen dataset has
+`activity_data`), which is why the Phase 3 closure probe (process view only) passed.
+
+**Observed:** Playwright live dry run — after facility click the process view renders;
+after the first process-bar click the `<svg>` disappears and the page loses the app
+(`locator.textContent: Timeout … waiting for svg`), no explicit error shown to the user.
+
+**Fix (this branch):** Dashboard now merges the already-fetched `activities` group into the
+dataset passed to `DrillMap` (`activity_data: activities ?? dataset.activity_data`).
+Read-path wiring only; no calculation or contract change. Verified by the automated dry
+run reaching the activity view and asserting `Activities under Boiler` + gas/diesel rows.
+
+**Why it matters:** a judge clicking the leak map in the live demo would blank the dashboard.
+Severity HIGH per the demo-safety rule; logged before the fix as required.
+
+---
+
+## BUG-4-08 — HIGH (demo) / MEDIUM (logic) — K1 CAPEX ignores adoption; sliders can't reach a budget
+
+**Location:** `engine/simulator.py:226` (`total_capex = sum(s.capex …)`) and `:448-450`
+(`capex = capex_override or _capex_point(iv)`; no multiplication by `adoption_percentage`).
+Adoption correctly scales the resource fractions (`:389-407`) but not capital.
+
+**Observed (executed, JWT live stack):**
+
+| Scenario sent to K1 | capex | annual saving | projected | payback | over_budget (5M) |
+|---|---|---|---|---|---|
+| all 18 recommendations @100% | ₹19,040,000 | ₹4,209,868 | 6,919,020.5 kg | 4.52 y | true |
+| all 18, 7 big-ticket at **0%** | ₹19,040,000 | ₹3,051,271 | 6,997,741.3 kg | 6.24 y | **true** |
+| only the 11 quick wins (removed from the list) | ₹4,540,000 | ₹3,051,271 | 6,997,741.3 kg | 1.49 y | false |
+
+The first two rows have **identical CAPEX** while savings/projection move — adoption scales the
+operating benefit, not the capital. (An engine-direct probe including the one non-recommended
+intervention shows ₹19,390,000; the UI/K1 total for the 18 recommendations is ₹19,040,000.)
+
+**What the docs say:** Module K "Adoption = 0% → No change"; the UI promise is that adoption
+sliders let a factory fit a plan to its budget. At 0% the intervention is not happening, so its
+capital cost should not be charged (or the UI needs a remove/deselect control).
+
+**Impact:** the demo cannot show an in-budget plan by lowering sliders — the cap stays ~₹1.9 cr.
+The demo script was reworked to the working flow (raise the budget to the plan's true size and
+show the engine-verified numbers; adoption ramp shown separately). Owner: **P3** (simulator
+capex semantics) — logged, not fixed in this closeout pass.
+
+---
+
+## BUG-4-07 — MEDIUM — Live tenant reads (processes/activities) fall back for the browser
+
+**Location:** `frontend/src/lib/api.ts` (sends only optional `Authorization`; no
+`X-Organization-Id`/`X-Role` stub headers) vs `backend/app/services/access.py::require_org_access`
+(rejects a principal with `organization_id=None`), while engine/P4 guards explicitly allow
+the anonymous stub principal.
+
+**Observed:** in stub mode the demo-data banner lists `processes, activities` even with
+PostgreSQL up; in JWT mode (token sent) all groups are live. P1's UI is correct for JWT
+deployments; a stub-mode demo shows a partial-fallback banner.
+
+**Suggested fix / decision:** deployment should run `AUTH_MODE=jwt` with a token (P2's
+`deployment.md`) — then this disappears; or P2 makes stub-mode tenant reads default to the
+seeded tenant exactly as the engine guards do. Not fixed here (P1/P2-owned; logged).
 
 ---
 
