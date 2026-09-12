@@ -43,11 +43,11 @@ def list_interventions(
 
 @router.get("/interventions/{intervention_id}")
 def get_intervention(
-    intervention_id: str,
+    intervention_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
-    intervention = db.get(CircularIntervention, UUID(intervention_id))
+    intervention = db.get(CircularIntervention, intervention_id)
     if intervention is None:
         raise NotFoundError("Intervention not found.")
     return intervention_to_dict(intervention)

@@ -53,11 +53,11 @@ def generate_report(
 
 @router.get("/reports/{report_id}")
 def get_report(
-    report_id: str,
+    report_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
-    report = report_service.get_report(db, UUID(report_id), principal)
+    report = report_service.get_report(db, report_id, principal)
     return {
         "report_id": str(report.id),
         "status": report.status,
@@ -70,12 +70,12 @@ def get_report(
 
 @router.get("/reports/{report_id}/export")
 def export_report(
-    report_id: str,
+    report_id: UUID,
     format: str = "json",
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> Response:
-    report = report_service.get_report(db, UUID(report_id), principal)
+    report = report_service.get_report(db, report_id, principal)
     body, media_type, filename = report_service.export_report(report, format)
     return Response(
         content=body,

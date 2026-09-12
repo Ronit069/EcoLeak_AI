@@ -26,13 +26,13 @@ router = APIRouter(prefix="/api", tags=["Module B - Process"])
     dependencies=[Depends(api_rate_limit)],
 )
 def create_process(
-    facility_id: str,
+    facility_id: UUID,
     payload: ProcessCreate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> dict:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     if payload.process_code:
         duplicate = db.scalar(
             select(Process).where(
@@ -66,11 +66,11 @@ def create_process(
 
 @router.get("/facilities/{facility_id}/processes")
 def list_processes(
-    facility_id: str,
+    facility_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> list[dict]:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     processes = db.scalars(
         select(Process)
         .where(Process.facility_id == facility.id, Process.deleted_at.is_(None))
@@ -81,22 +81,22 @@ def list_processes(
 
 @router.get("/processes/{process_id}")
 def get_process(
-    process_id: str,
+    process_id: UUID,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
-    return process_to_dict(access.get_process(db, UUID(process_id), principal))
+    return process_to_dict(access.get_process(db, process_id, principal))
 
 
 @router.patch("/processes/{process_id}")
 def update_process(
-    process_id: str,
+    process_id: UUID,
     payload: ProcessUpdate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> dict:
-    process = access.get_process(db, UUID(process_id), principal)
+    process = access.get_process(db, process_id, principal)
     facility = access.get_facility(db, process.facility_id, principal)
     before = process_to_dict(process)
     for key, value in payload.model_dump(exclude_unset=True).items():
@@ -117,12 +117,12 @@ def update_process(
 
 @router.delete("/processes/{process_id}", status_code=status.HTTP_204_NO_CONTENT)
 def delete_process(
-    process_id: str,
+    process_id: UUID,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> Response:
-    process = access.get_process(db, UUID(process_id), principal)
+    process = access.get_process(db, process_id, principal)
     facility = access.get_facility(db, process.facility_id, principal)
     process.deleted_at = utcnow()
     process.active = False

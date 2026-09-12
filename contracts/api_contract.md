@@ -103,7 +103,7 @@ old rows are deactivated, never updated or deleted.
 | # | Endpoint | Request | Response | Security |
 |---|---|---|---|---|
 | F1 | `POST /api/facilities/{facility_id}/reporting-periods/{period_id}/calculations` | `{ activity_ids?: UUID[], calculation_version: str }` (omit to calculate all) | `202 EmissionCalculation[]` | AuthN, AuthZ, tenant ownership, period not LOCKED/CLOSED unless versioned, missing-factor handling, duplicate calculation prevention, business validation, audit, safe errors |
-| F2 | `GET /api/facilities/{facility_id}/reporting-periods/{period_id}/calculations` | — | `EmissionCalculation[]` (each keeps factor id/version/source) | AuthN, tenant ownership, safe errors |
+| F2 | `GET /api/facilities/{facility_id}/reporting-periods/{period_id}/calculations` | — | `EmissionCalculation[]` (each keeps factor id/version/source) — **Phase 3:** served on the merged router; calculations are derived deterministically on demand (identical payload to F1) rather than read from a persisted job list | AuthN, tenant ownership, safe errors |
 | F3 | `GET /api/facilities/{facility_id}/reporting-periods/{period_id}/inventory-summary` | — | `{ scope1_kgco2e, scope2_kgco2e, scope3_kgco2e, total_kgco2e, carbon_intensity, production_unit, generated_at }` | AuthN, tenant ownership, safe errors |
 
 Formula (DB doc §7.1): `CO2e = normalized_activity_value × emission_factor`. Negative activity is
@@ -158,13 +158,19 @@ filters run before ranking (Module J).
 |---|---|---|---|---|
 | J1 | `POST /api/facilities/{facility_id}/reporting-periods/{period_id}/recommendations/generate` | `{ hotspot_ids?: UUID[], budget_limit?: Decimal, constraints?: object }` | `202 RecommendationGenerationResult` (see `mocks/mock_recommendation_output.json`) | AuthN, AuthZ, tenant ownership, payload schema, business validation (budget >= 0, known hotspots/interventions only), rate limit (LLM quota), audit, safe errors |
 | J2 | `GET /api/facilities/{facility_id}/reporting-periods/{period_id}/recommendations` | Query: `status`, `rank_max` | `RecommendationGenerationResult` | AuthN, tenant ownership, safe errors |
-| J3 | `PATCH /api/recommendations/{recommendation_id}` | `{ status: RecommendationStatus }` | `Recommendation` | AuthN, AuthZ, tenant ownership, payload schema, status transition rule, audit, safe errors |
+| J3 | `PATCH /api/recommendations/{recommendation_id}` | `{ status: RecommendationStatus }` | `Recommendation` — **Phase 3:** served on the merged router with an in-memory status store + transition rule (invalid status 422, invalid transition 409, unknown id 404, frozen shape). SQLAlchemy persistence is Phase-3 backlog | AuthN, AuthZ, tenant ownership, payload schema, status transition rule, audit, safe errors |
 | M1 | `GET /api/recommendations/{recommendation_id}/explanation` | — | `{ recommendation_id, summary, evidence: object, assumptions: object, confidence_score, generated_by }` | AuthN, tenant ownership, safe errors (LLM narrative labeled separately from deterministic values) |
 
 Ranking formula (Req doc §20): `0.30 Carbon Saving + 0.25 Financial Return + 0.15 Feasibility
 + 0.15 Circularity + 0.10 Implementation Speed + 0.05 Confidence`.
 LLM may explain only; it must never invent factors, CO2e, CAPEX, savings, payback, or
 compliance claims.
+
+**Phase 3 note (F-8):** every J1/J2/M1 recommendation carries a machine-readable
+degraded-mode label at `impact.assumptions.data_is_stub` (bool). It is `true`
+while the P4 demo tariff fixture supplies resource baselines/tariffs; it flips
+to `false` automatically when a real `FacilityContext` is wired in. Additive key
+inside the free-form `assumptions` object only — no envelope key changed.
 
 ---
 

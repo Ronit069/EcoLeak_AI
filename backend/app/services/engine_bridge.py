@@ -1,4 +1,4 @@
-"""Phase 2 bridge between the P2 platform and the P3 (F/G/L) / P4 (J) engines.
+﻿"""Phase 2 bridge between the P2 platform and the P3 (F/G/L) / P4 (J) engines.
 
 Everything here is read-only and gated by ``settings.use_mock_data``:
 
@@ -30,7 +30,8 @@ def _sql_data_source():
 
     settings = get_settings()
     dsn = settings.engine_dsn or settings.database_url
-    return SQLActivityDataSource(create_engine(dsn, future=True))
+    connect_args = {"connect_timeout": 3} if dsn.startswith("postgresql") else {}
+    return SQLActivityDataSource(create_engine(dsn, future=True, connect_args=connect_args))
 
 
 def mock_data_source():

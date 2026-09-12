@@ -363,6 +363,10 @@ def generate_with_diagnostics(
                 + " (deterministic P4 estimator until P3 baselines are live)",
                 "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
                 "context_available": context is not None,
+                # F-8: loud, machine-readable degraded-mode label (the P4 demo
+                # fixture supplies tariffs/resource baselines today). Flips to
+                # False automatically when a real FacilityContext is wired in.
+                "data_is_stub": True if context is None else bool(context.is_fixture),
             }
         )
         if candidate.payback_note:

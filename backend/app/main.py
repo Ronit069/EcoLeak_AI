@@ -6,12 +6,18 @@ base URL. Engine domain errors share the frozen error shape.
 """
 from __future__ import annotations
 
+import logging
 import sys
+import time
+import uuid
+from concurrent.futures import ThreadPoolExecutor
+from concurrent.futures import TimeoutError as FuturesTimeoutError
 from pathlib import Path
 
-from fastapi import FastAPI, Request
+from fastapi import Depends, FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from sqlalchemy import text
 
 # Repo-root bootstrap so ``engine`` / ``p4`` are importable when this app is
 # launched from backend/ (uvicorn app.main:app).
@@ -21,7 +27,11 @@ if str(_REPO_ROOT) not in sys.path:
 
 from app.config import get_settings
 from app.contracts_compat import schemas as contract_schemas  # noqa: F401 (fail fast if missing)
+from app.db import engine
+from app.deps import api_rate_limit  # noqa: F401 (re-export for routers)
 from app.errors import error_payload, register_exception_handlers
+from app.logging_setup import configure_logging
+from app.security import get_current_principal
 from app.routers import (
     activity,
     facilities,
@@ -38,12 +48,29 @@ from engine.errors import CarbonPlatformError  # noqa: E402
 from p4.api import router as p4_router  # noqa: E402
 from p4.feedback import FeedbackError  # noqa: E402
 
+logger = logging.getLogger("ecoleak.api")
+
+# F-4: bounded health probe pool — guarantees /api/health answers fast even
+# when the database is unreachable (no indefinite hang on startup checks).
+_HEALTH_POOL = ThreadPoolExecutor(max_workers=4, thread_name_prefix="health")
+_HEALTH_DB_TIMEOUT_S = 4.0
+
+
+def _database_probe() -> str:
+    try:
+        with engine.connect() as connection:
+            connection.execute(text("SELECT 1"))
+        return "ok"
+    except Exception as exc:  # noqa: BLE001 - probe reports, never raises
+        return f"error: {type(exc).__name__}"
+
 
 _registered_carbon_handler = False
 
 
 def create_app() -> FastAPI:
     global _registered_carbon_handler
+    configure_logging()
     settings = get_settings()
     app = FastAPI(
         title="EcoLeak AI - Backend Platform & Data Engine (merged Phase 1)",
@@ -65,11 +92,22 @@ def create_app() -> FastAPI:
 
     @app.middleware("http")
     async def security_headers(request, call_next):
+        # F-14: structured request logging with correlation ids; failures are
+        # logged with full context by the 500 handler in app/errors.py.
+        request_id = uuid.uuid4().hex
+        request.state.request_id = request_id
+        started = time.perf_counter()
         response = await call_next(request)
         response.headers.setdefault("X-Content-Type-Options", "nosniff")
         response.headers.setdefault("X-Frame-Options", "DENY")
         response.headers.setdefault("Referrer-Policy", "no-referrer")
         response.headers.setdefault("Content-Security-Policy", "default-src 'none'; frame-ancestors 'none'")
+        response.headers["X-Request-Id"] = request_id
+        logger.info(
+            "request method=%s path=%s status=%s request_id=%s elapsed_ms=%s",
+            request.method, request.url.path, response.status_code, request_id,
+            round((time.perf_counter() - started) * 1000, 2),
+        )
         return response
 
     register_exception_handlers(app)
@@ -101,18 +139,57 @@ def create_app() -> FastAPI:
         factors.router,
         interventions.router,
         reports.router,
-        engine_router,
-        p4_router,
     ):
         app.include_router(router)
 
+    # T0-3: AuthN is enforced on the engine/P4 surface (router-level), and
+    # each route adds its tenant-ownership guard (see app/guards.py).
+    app.include_router(
+        engine_router,
+        dependencies=[Depends(get_current_principal)],
+    )
+    app.include_router(
+        p4_router,
+        dependencies=[Depends(get_current_principal)],
+    )
+
     @app.get("/api/health", tags=["ops"])
     def health() -> dict:
+        # F-4: health checks real dependencies (bounded) instead of reporting
+        # ok blindly. The DB probe is capped so a dead DB answers in seconds.
+        components: dict[str, str] = {}
+        future = _HEALTH_POOL.submit(_database_probe)
+        try:
+            components["database"] = future.result(timeout=_HEALTH_DB_TIMEOUT_S)
+        except FuturesTimeoutError:
+            components["database"] = "error: timeout"
+        try:
+            from engine.api import get_engine as _get_engine
+
+            components["engine"] = (
+                "ok"
+                if _get_engine().data_source.get_organization() is not None
+                else "degraded: no organization in data source"
+            )
+        except Exception as exc:  # noqa: BLE001 - probe reports, never raises
+            components["engine"] = f"error: {type(exc).__name__}: {exc}"
+        healthy = all(value.startswith("ok") for value in components.values())
+        if not healthy:
+            return JSONResponse(
+                status_code=503,
+                content=error_payload(
+                    "HEALTH_DEPENDENCY_UNAVAILABLE",
+                    "One or more dependencies are unavailable.",
+                    "ERROR",
+                    {"components": components},
+                ),
+            )
         return {
             "status": "ok",
             "app": settings.app_name,
             "environment": settings.environment,
             "use_mock_data": settings.use_mock_data,
+            "components": components,
         }
 
     return app

@@ -33,8 +33,8 @@ async function probe(url, shot, label) {
   return { engineLabel, localLabel, bannerScenario };
 }
 
-const fixed = await probe('http://localhost:5174', 'D:/EcoLeak_AI/.impeccable/review/k1-ui-fixed.png', 'FIXED API (:8000)');
-const broken = await probe('http://localhost:5175', 'D:/EcoLeak_AI/.impeccable/review/k1-ui-broken.png', 'BROKEN API (:8001, 5-entry seed)');
+const fixed = await probe('http://localhost:5174', 'k1-ui-fixed.png', 'FIXED API (:8000)');
+const broken = await probe('http://localhost:5175', 'k1-ui-broken.png', 'BROKEN API (:8001, 5-entry seed)');
 
 const okFixed = fixed.engineLabel && !fixed.localLabel && !fixed.bannerScenario;
 const okBroken = broken.localLabel && !broken.engineLabel && broken.bannerScenario;

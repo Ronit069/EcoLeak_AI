@@ -66,13 +66,13 @@ def _duplicate_exists(
     dependencies=[Depends(api_rate_limit)],
 )
 def create_activity(
-    facility_id: str,
+    facility_id: UUID,
     payload: ActivityCreate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> dict:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     period = access.get_period(db, payload.reporting_period_id, principal, facility=facility)
     ensure_period_editable(period)
     process_id = _resolve_process(db, facility, payload.process_id)
@@ -129,15 +129,15 @@ def create_activity(
 
 @router.put("/facilities/{facility_id}/activity/{activity_id}")
 def update_activity(
-    facility_id: str,
-    activity_id: str,
+    facility_id: UUID,
+    activity_id: UUID,
     payload: ActivityUpdate,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> dict:
-    facility = access.get_facility(db, UUID(facility_id), principal)
-    activity = access.get_activity(db, UUID(activity_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
+    activity = access.get_activity(db, activity_id, principal)
     if activity.facility_id != facility.id:
         raise NotFoundError("Activity not found for this facility.")
     period = access.get_period(db, activity.reporting_period_id, principal, facility=facility)
@@ -188,14 +188,14 @@ def update_activity(
 
 @router.get("/facilities/{facility_id}/activity")
 def list_activity(
-    facility_id: str,
+    facility_id: UUID,
     reporting_period_id: UUID | None = None,
     process_id: UUID | None = None,
     activity_category: str | None = None,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> list[dict]:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     stmt = select(ActivityData).where(
         ActivityData.facility_id == facility.id, ActivityData.deleted_at.is_(None)
     )
@@ -215,7 +215,7 @@ def list_activity(
     dependencies=[Depends(upload_rate_limit)],
 )
 def import_activity_file(
-    facility_id: str,
+    facility_id: UUID,
     request: Request,
     file: UploadFile = File(...),
     reporting_period_id: UUID = Form(...),
@@ -224,7 +224,7 @@ def import_activity_file(
     db: Session = Depends(get_db),
     principal: Principal = Depends(require_roles(*WRITE_ROLES)),
 ) -> dict:
-    facility = access.get_facility(db, UUID(facility_id), principal)
+    facility = access.get_facility(db, facility_id, principal)
     period = access.get_period(db, reporting_period_id, principal, facility=facility)
     ensure_period_editable(period)
 
@@ -268,14 +268,14 @@ def get_import_batch(
 
 @router.get("/facilities/{facility_id}/reporting-periods/{period_id}/data-quality")
 def get_data_quality(
-    facility_id: str,
-    period_id: str,
+    facility_id: UUID,
+    period_id: UUID,
     request: Request,
     db: Session = Depends(get_db),
     principal: Principal = Depends(get_current_principal),
 ) -> dict:
-    facility = access.get_facility(db, UUID(facility_id), principal)
-    period = access.get_period(db, UUID(period_id), principal, facility=facility)
+    facility = access.get_facility(db, facility_id, principal)
+    period = access.get_period(db, period_id, principal, facility=facility)
     assessment = quality.assess_period(db, facility, period, persist=True)
     audit.record(
         db, principal=principal, organization_id=facility.organization_id,
