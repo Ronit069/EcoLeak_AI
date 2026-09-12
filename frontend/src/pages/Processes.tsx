@@ -22,7 +22,7 @@ const EMPTY_EXTRAS: DraftExtras = {
 }
 
 export function ProcessesPage() {
-  const { dataset, hotspots, error } = usePhase1Data()
+  const { dataset, hotspots, processes, activities, error } = usePhase1Data()
   const [filter, setFilter] = useState('')
   const [local, setLocal] = useState<{ id: string; name: string; sequence_no: number; extras: DraftExtras }[]>([])
   const [name, setName] = useState('')
@@ -30,9 +30,9 @@ export function ProcessesPage() {
   const [extras, setExtras] = useState<DraftExtras>(EMPTY_EXTRAS)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   if (error) return <div className="notice"><b>Failed to load.</b> {error}</div>
-  if (!dataset || !hotspots) return <Loading />
+  if (!dataset || !hotspots || !processes) return <Loading />
 
-  const rows = [...dataset.processes]
+  const rows = [...processes]
     .sort((a, b) => (a.sequence_no ?? 99) - (b.sequence_no ?? 99))
     .filter(p => p.name.toLowerCase().includes(filter.toLowerCase()))
 
@@ -44,7 +44,7 @@ export function ProcessesPage() {
     .find(n => n.id === selectedId) ?? null
   const selectedHotspot = selected ? hotspotByProcess.get(selected.id) ?? null : null
   const selectedActivities = selected
-    ? dataset.activity_data.filter(a => a.process_id === selected.id)
+    ? (activities ?? []).filter(a => a.process_id === selected.id)
     : []
 
   const setEx = (k: keyof DraftExtras) => (e: React.ChangeEvent<HTMLInputElement>) =>
@@ -55,7 +55,7 @@ export function ProcessesPage() {
       <div className="page-head">
         <div>
           <h1>Process mapper</h1>
-          <p>{dataset.processes.length} processes · click a node for hotspot detail · links editor ships in Phase 2</p>
+          <p>{processes.length} processes · click a node for hotspot detail · links editor ships in Phase 2</p>
         </div>
         <span className="provenance">B1–B5 · sequence_no &gt; 0 · carbon_impact_level stub</span>
       </div>
@@ -169,7 +169,7 @@ export function ProcessesPage() {
           <div className="field">
             <label htmlFor="proc-name">Process name</label>
             <input id="proc-name" value={name} onChange={e => setName(e.target.value)} required maxLength={150} placeholder="Stenter, ETP…" />
-            {name && dataset.processes.some(p => p.name.toLowerCase() === name.trim().toLowerCase()) && (
+            {name && processes.some(p => p.name.toLowerCase() === name.trim().toLowerCase()) && (
               <span className="field-error">Duplicate name — business rule rejects this on the API.</span>
             )}
           </div>
