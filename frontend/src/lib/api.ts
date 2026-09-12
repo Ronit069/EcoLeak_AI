@@ -224,8 +224,36 @@ export function getFacilitySelection(): string | null {
   try { return localStorage.getItem(FACILITY_KEY) } catch { return null }
 }
 
-export async function fetchFacilityPeriods(facilityId: string): Promise<Array<{ id: string }>> {
-  return getJson<Array<{ id: string }>>(`${API_URL}/api/facilities/${facilityId}/reporting-periods`)
+export interface FacilityPeriod {
+  id: string
+  period_type: string
+  start_date: string
+  end_date: string
+  status: string
+}
+
+export async function fetchFacilityPeriods(facilityId: string): Promise<FacilityPeriod[]> {
+  // P1-09: engine-resolved periods (works without PostgreSQL); falls back to
+  // the dataset periods for the demo facility.
+  const r = await liveOrMock<FacilityPeriod[]>(
+    'facility-periods',
+    async () => {
+      const rows = await getJson<unknown[]>(
+        `${API_URL}/api/engine/facilities/${facilityId}/reporting-periods`)
+      return rows as FacilityPeriod[]
+    },
+    async () => {
+      const { data } = await fetchDataset()
+      if (data.facilities.some(f => f.id === facilityId)) {
+        return data.reporting_periods.map(p => ({
+          id: p.id, period_type: p.period_type,
+          start_date: p.start_date, end_date: p.end_date, status: p.status,
+        }))
+      }
+      return []
+    },
+  )
+  return r.data
 }
 
 export async function fetchBootstrapIds(): Promise<BootstrapIds> {
