@@ -39,3 +39,7 @@ GA-05, GA-06/P3-01, GA-07, P1-01..P1-09, P2-03.
 | P3-08 sourced/versioned cost data | P2+P3 | needs P2 cost feed |
 | P3-09..P3-25 (biogenic, feedstock, GWP, reweight, currency, baselines, L-projection, severity vocabulary, H2/H3) | P3 | each changes semantics / needs a decision |
 | F-9/F-10/F-11 (provenance polish, distributed rate limiting, query timeouts), F-16/F-17/F-18, Module H/Q persistence | P2/P4/P1 | previously deferred; unchanged |
+
+### P4 audit follow-up (branch `phase3-fixes`, post PR #8)
+**Closed:** P4-C1 (=GA-01), P4-H2 (=engine_bridge), P4-H1, P4-M1, P4-M3, P4-L6, P4-M2 (documented addendum R31).
+**Still open (owner P4):** P4-M4 (no-feasible-reason envelope), P4-M5 (conflicts/prereqs at K1 seed boundary), P4-M6 (operating hours in explanations), P4-M7 (tariff currency validation), P4-M8 (P4 factor provenance), P4-M9 (pre-generation DQ warning), P4-M10 (recycled-material factor classification), P4-M11 (stub-mode anonymity; shared with GA-02), P4-L1..L5/L7..L9.

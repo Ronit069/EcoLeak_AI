@@ -326,7 +326,14 @@ def generate_with_diagnostics(
     recommendations: list[RecommendationOutputItem] = []
     for rank, candidate in enumerate(survivors, start=1):
         conf = _dec(candidate.scores.confidence, 2)
-        co2_saving = _dec(candidate.co2_saving_kg, 6)
+        # P4-H1: a recycling pathway may net-negative (Module K / C2: "report as
+        # additional emissions"). The frozen assessment field is ge=0, so floor
+        # it for the contract and record the signed delta in assumptions instead
+        # of raising a ValidationError that kills the whole ranking run.
+        co2_saving_signed = _dec(candidate.co2_saving_kg, 6)
+        co2_saving = (
+            max(co2_saving_signed, ZERO) if co2_saving_signed is not None else None
+        )
         capex = _dec(candidate.estimated_capex, 2)
         annual_saving = _dec(candidate.annual_saving, 2)
         payback = _dec(candidate.payback, 2)
@@ -367,8 +374,16 @@ def generate_with_diagnostics(
                 # fixture supplies tariffs/resource baselines today). Flips to
                 # False automatically when a real FacilityContext is wired in.
                 "data_is_stub": True if context is None else bool(context.is_fixture),
+                # P4-H1: signed audit of the CO2 saving; when negative the run
+                # is physically emitting more than baseline and reports the
+                # extra as additional emissions.
+                "net_co2_saving_kg_signed": (
+                    str(co2_saving_signed) if co2_saving_signed is not None else None
+                ),
             }
         )
+        if co2_saving_signed is not None and co2_saving_signed < ZERO:
+            assumptions["additional_emissions_kg"] = str(-co2_saving_signed)
         if candidate.payback_note:
             assumptions["payback_note"] = candidate.payback_note
 

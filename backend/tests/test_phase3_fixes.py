@@ -67,3 +67,34 @@ def test_p1_05_n1_exposes_unresolved_count(client):
     assert "unresolved_count" in body
     assert isinstance(body["unresolved_count"], int)
     assert body["unresolved_count"] >= 0
+
+
+def _first_recommendation_id(client) -> str:
+    recs = client.get(f"/api/facilities/{F}/reporting-periods/{P}/recommendations").json()
+    return recs["recommendations"][0]["id"]
+
+
+def test_p4_m1_invalid_feedback_type_is_422_frozen(client):
+    rid = _first_recommendation_id(client)
+    r = client.post(f"/api/recommendations/{rid}/feedback", json={"feedback_type": "BOGUS"})
+    assert r.status_code == 422, r.text
+    assert set(r.json().keys()) == {"error_code", "message", "severity", "details"}
+    assert r.json()["error_code"] == "VALIDATION_ERROR"
+
+
+def test_p4_m3_feedback_for_unknown_recommendation_is_404(client):
+    r = client.post(
+        "/api/recommendations/00000000-0000-4000-8000-ffffffffffff/feedback",
+        json={"feedback_type": "USEFUL"},
+    )
+    assert r.status_code == 404, r.text
+    assert r.json()["error_code"] == "NOT_FOUND"
+    r2 = client.get("/api/recommendations/00000000-0000-4000-8000-ffffffffffff/feedback")
+    assert r2.status_code == 404
+
+
+def test_p4_l6_invalid_filters_are_422(client):
+    r = client.get(f"/api/facilities/{F}/reporting-periods/{P}/recommendations?status=BOGUS")
+    assert r.status_code == 422, r.text
+    r2 = client.get(f"/api/facilities/{F}/reporting-periods/{P}/recommendations?rank_max=0")
+    assert r2.status_code == 422, r2.text

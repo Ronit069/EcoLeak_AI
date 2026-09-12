@@ -185,3 +185,17 @@ Closures for the Phase-3 audit findings (general + P1). No frozen key removed.
 | R24 | P1-06 | New Reports page (`/reports`): generate, list, inspect provenance/quality, export JSON/CSV | new UI route | frontend build |
 | R25 | P1-09 | Facility selector (persisted; bootstrap honours it); active-facility display fixed on Dashboard/Profiling/DrillMap | none | frontend build |
 | R26 | P2-03 | Emission-factor create/version audit rows now store full JSON-safe before/after snapshots | none | backend suite 77/77 |
+
+---
+
+# PHASE 3 P4 AUDIT FIX ADDENDUM (branch `phase3-fixes`, after PR #8)
+
+Closures for `docs/phase3/p4_audit.md`. No frozen key renamed/removed.
+
+| # | Item | Change | Contract impact | Verification |
+|---|---|---|---|---|
+| R27 | P4-H1 (HIGH) | Negative-net recycling no longer crashes the ranker: `estimated_co2_saving_kg` is floored at 0 and the signed value is recorded in `impact.assumptions.net_co2_saving_kg_signed`, with `additional_emissions_kg` when negative | none (assumptions additive; frozen field stays ge=0) | `test_p4_h1_negative_net_recycling_does_not_crash` |
+| R28 | P4-M1 | `feedback_type` validated at the boundary -> `422 VALIDATION_ERROR` (was 500) | none | `test_p4_m1_invalid_feedback_type_is_422_frozen` |
+| R29 | P4-M3 | Feedback (Q1/Q2) for a recommendation id that is not in the current ranking -> `404 NOT_FOUND` (frozen) | none | `test_p4_m3_feedback_for_unknown_recommendation_is_404` |
+| R30 | P4-L6 | J2 `status`/`rank_max` query params validated -> 422 instead of silent empty 200 | none | `test_p4_l6_invalid_filters_are_422` |
+| R31 | P4-M2 | Q1 superset fields and Q2 `{recommendation_id, latest_state, history}` are the **served** shapes; documented here rather than reshaping (additive; no consumer breakage) | documented | p4_audit §2 P4-M2 |

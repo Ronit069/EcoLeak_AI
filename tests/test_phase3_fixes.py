@@ -70,3 +70,39 @@ def test_ga06_mock_dataset_carries_full_library():
     data = json.loads((ROOT / "mocks" / "mock_dataset.json").read_text(encoding="utf-8"))
     assert len(data["circular_interventions"]) == 19
     assert len(load_mock_data_source().get_interventions()) == 19
+
+
+def test_p4_h1_negative_net_recycling_does_not_crash():
+    """P4-H1: a recycling pathway that emits more than the landfill it avoids
+    must not raise; the contract field is floored and the signed delta recorded."""
+    from decimal import Decimal
+
+    from p4.engine import generate_with_diagnostics
+    from p4.explainability import TemplateExplainer
+    from p4.models import ResourceEmissionFactors
+    from tests import helpers
+
+    inputs = helpers.real_rank_inputs()
+    factors = ResourceEmissionFactors(
+        waste_per_kg=Decimal("0.8"),
+        recycling_processing_emission_factor=Decimal("1.2"),  # net-negative
+    )
+    run = generate_with_diagnostics(
+        inputs["hotspots"],
+        inputs["facility"],
+        organization=inputs["organization"],
+        processes=inputs["processes"],
+        context=inputs["context"],
+        emission_factors=factors,
+        explainer=TemplateExplainer(),
+        clock=lambda: __import__("datetime").datetime.now(__import__("datetime").timezone.utc),
+    )
+    assert run.result.recommendations, "ranking must still produce recommendations"
+    for rec in run.result.recommendations:
+        # contract field is never negative
+        assert rec.impact.estimated_co2_saving_kg is None or rec.impact.estimated_co2_saving_kg >= 0
+        signed = rec.impact.assumptions.get("net_co2_saving_kg_signed")
+        if signed is not None and Decimal(str(signed)) < 0:
+            assert rec.impact.assumptions.get("additional_emissions_kg")
+            assert rec.impact.estimated_co2_saving_kg == 0
+

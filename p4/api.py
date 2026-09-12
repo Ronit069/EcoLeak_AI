@@ -20,6 +20,7 @@ from fastapi import APIRouter, Body, Depends, Query
 
 from contracts.schemas import (
     Facility,
+    FeedbackType,
     HotspotDetectionResult,
     Organization,
     Process,
@@ -177,6 +178,16 @@ def get_recommendations(
     status: Optional[str] = Query(default=None),
     rank_max: Optional[int] = Query(default=None),
 ) -> dict:
+    # P4-L6: reject invalid filters instead of silently returning an empty 200.
+    if status is not None and status not in {s.value for s in RecommendationStatus}:
+        raise PlatformValidationError(
+            f"Invalid status {status!r}.",
+            details={"allowed": [s.value for s in RecommendationStatus]},
+        )
+    if rank_max is not None and rank_max < 1:
+        raise PlatformValidationError(
+            "rank_max must be >= 1.", details={"rank_max": rank_max}
+        )
     result = _run_ranker(facility_id, period_id, None)
     items = [
         _with_stored_status(rec)
@@ -325,6 +336,19 @@ def leak_map(facility_id: str, period_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _require_recommendation(recommendation_id: str) -> None:
+    """P4-M3: reject feedback for ids that are not part of the current ranking
+    (previously any UUID was accepted and stored)."""
+    engine = get_engine()
+    context = engine.default_context()
+    result = _run_ranker(context["facility_id"], context["reporting_period_id"], None)
+    if not any(str(rec.id) == recommendation_id for rec in result.recommendations):
+        raise NotFoundError(
+            "Recommendation not found.",
+            details={"recommendation_id": recommendation_id},
+        )
+
+
 @router.post(
     "/api/recommendations/{recommendation_id}/feedback",
     status_code=201,
@@ -334,11 +358,23 @@ def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> di
     """Q1: capture Useful / Not Applicable / Consider Later / Implemented /
     Rejected feedback with optional actual outcomess. REJECTED requires a
     structured reason_code (spam/rate-limit guarded at the platform layer)."""
-    feedback_type = body.get("feedback_type")
-    if not feedback_type:
+    raw_type = body.get("feedback_type")
+    if not raw_type:
         from engine.errors import MissingParameterError
 
         raise MissingParameterError("feedback_type is required", {"recommendation_id": recommendation_id})
+    # P4-M1: validate the enum at the boundary (was passed raw into the store
+    # and raised an uncaught pydantic ValidationError -> 500).
+    try:
+        feedback_type = FeedbackType(raw_type)
+    except ValueError:
+        raise PlatformValidationError(
+            f"Invalid feedback_type {raw_type!r}.",
+            details={
+                "recommendation_id": recommendation_id,
+                "allowed": [kind.value for kind in FeedbackType],
+            },
+        )
     reason_code = None
     if body.get("reason_code"):
         # F-13: invalid enum input is a 422 in the frozen shape, never a 500.
@@ -352,6 +388,7 @@ def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> di
                     "allowed": [code.value for code in RejectionReasonCode],
                 },
             )
+    _require_recommendation(recommendation_id)
     event: FeedbackEvent = _feedback_store.submit(
         recommendation_id=recommendation_id,
         feedback_type=feedback_type,
@@ -370,6 +407,7 @@ def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> di
 )
 def feedback_history(recommendation_id: str) -> dict:
     """Q2: latest state + full history for a recommendation."""
+    _require_recommendation(recommendation_id)
     events = _feedback_store.history(recommendation_id)
     latest = events[-1] if events else None
     return {
