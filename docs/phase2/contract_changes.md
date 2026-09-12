@@ -117,3 +117,19 @@ existing endpoints (A5/A9/B2/C3/G2/J2/M1/N1/N2/K1) as documented.
 require a live PostgreSQL; when P2's DB is down those groups fall back to mocks in
 P1 (by design, §2 of the P1 log). P3/P4 — no change required; J2/N1/N2/G2 shapes
 consumed as-is, verified by the running P4 router outputs.
+
+---
+
+# Phase 2 POST-AUDIT ADDENDUM (P1, audit pass)
+
+Two additive/response-shape observations found during the executed Phase 2
+audit probe of the merged surface (single base URL `http://localhost:8000`):
+
+| Area | Change | Old shape (contract) | New shape (live) | Reason / status |
+|---|---|---|---|---|
+| N1 dashboard | additive key `production_unit` in `GET .../dashboard` response | contract lists `total_kgco2e, scope_breakdown, carbon_intensity, largest_hotspot, circularity_score, potential_reduction_kgco2e, potential_annual_saving, last_calculated_at, empty_state?` | same + `production_unit` | additive; ignored by P1 (no Zod strict parse on N1) — **undocumented until now**; owners: P4/P1 merged gateway |
+| K1 simulate | response is a wrapper, not the frozen `ImpactAssessment` | `202 ImpactAssessment` | `{scenario_id, assessment: ImpactAssessment, interventions, payback_status, payback_reason, over_budget, issues}` | originates in `engine/api.py` (Phase 1); P1 normalizes defensively (`normalizeSimulate`); **P3 to confirm/align or re-document**; additive keys, agency of the frozen model intact inside `assessment` |
+| K1 simulate | HTTP status | `202` accepted-async | `200` synchronous | works (deterministic engine); note for P2/P3 API-conformance pass |
+
+Consumers notified: P1 (adapted + logged), P3 (owner of `engine/api.py` —
+flagged for confirmation), P4 (N1 owner — flagged).
