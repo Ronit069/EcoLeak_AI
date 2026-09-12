@@ -62,6 +62,59 @@ jobs:
           npm ci --no-audit --no-fund
           npm run build
 
+  K1-adversarial:
+    runs-on: ubuntu-latest
+    env:
+      USE_MOCK_DATA: "false"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install root deps + playwright chromium
+        run: |
+          python -m pip install -q -r requirements.txt -r backend/requirements.txt
+          npm ci --no-audit --no-fund
+          npx playwright-core install chromium --only-shell
+        working-directory: frontend
+      - name: Seed fixed + broken DBs, build both UI variants (fresh, no caches)
+        run: |
+          rm -rf frontend/dist frontend/dist-broken frontend/node_modules/.vite
+          python -m tools.seed_sql_lite var/ecoleak.sqlite3
+          python -m tools.seed_sqlite_broken
+          cd frontend
+          VITE_USE_MOCK_DATA=auto VITE_API_URL=http://localhost:8000 npm run build
+          VITE_USE_MOCK_DATA=auto VITE_API_URL=http://localhost:8001 npx vite build --outDir dist-broken
+          # env-baking guard: the baked URL must exist in each bundle
+          python - <<'PY2'
+          import glob
+          fixed = open(glob.glob('frontend/dist/assets/index-*.js')[0], encoding='utf-8', errors='ignore').read()
+          broken = open(glob.glob('frontend/dist-broken/assets/index-*.js')[0], encoding='utf-8', errors='ignore').read()
+          assert 'localhost:8000' in fixed and 'localhost:8001' not in fixed, 'FIXED bundle env-baking broken'
+          assert 'localhost:8001' in broken and 'localhost:8000' not in broken, 'BROKEN bundle env-baking broken'
+          print('env baking guard PASS')
+          PY2
+      - name: Start fixed (:8000) + broken (:8001) APIs and proxy-free static servers
+        run: |
+          USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8000 &
+          USE_MOCK_DATA=false ENGINE_DSN="sqlite+pysqlite:///./var/ecoleak_broken.sqlite3" python -m uvicorn app.main:app --app-dir backend --port 8001 &
+          node tests/static_server.mjs frontend/dist 5174 &
+          node tests/static_server.mjs frontend/dist-broken 5175 &
+          sleep 10
+      - name: RED/GREEN strict per-id checks + UI dual-state
+        run: |
+          # fixed: MUST pass
+          node tests/k1_strict.mjs http://localhost:8000
+          # broken: MUST fail (red) — invert to make CI red/green visible
+          if node tests/k1_strict.mjs http://localhost:8001 2>/dev/null; then
+            echo "FAIL: broken backend must NOT pass strict checks"; exit 1
+          fi
+          # UI: fixed shows engine label, broken shows fallback label
+          node tests/k1_ui.mjs
+
   P2 migration + seed smoke:
     runs-on: ubuntu-latest
     services:
