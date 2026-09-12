@@ -284,9 +284,18 @@ class TemplateExplainer:
                 f"{_num(evidence.estimated_co2_saving_kg, 0)} kgCO2e/year."
             )
         payback_text = (
-            f"{_num(evidence.payback_years, 2)} years"
-            if evidence.payback_years is not None
-            else "not available (no positive annual saving)"
+            "immediate (zero CAPEX)"
+            if evidence.payback_years is not None and float(evidence.payback_years) == 0.0
+            else (
+                f"{_num(evidence.payback_years, 2)} years"
+                if evidence.payback_years is not None
+                else "not available (no positive annual saving)"
+            )
+        )
+        price_basis = (
+            "static fixture prices (data_is_stub=true)"
+            if evidence.assumptions.get("data_is_stub", True)
+            else "static prices from the live tariff source"
         )
         parts = [
             f"Ranked #{evidence.rank} with a final score of {evidence.final_score}/100 for hotspot "
@@ -308,8 +317,8 @@ class TemplateExplainer:
             f"waste ratio {_num(evidence.hotspot_waste_ratio_score, 1)}, "
             f"improvement potential {_num(evidence.hotspot_improvement_potential_score, 1)} (out of 100).",
             f"Evidence source: {evidence.evidence_source or 'not documented'}. "
-            f"Assumptions: static energy prices; reductions applied to the process baseline; "
-            f"deterministic carbon estimate until the P3 engine supplies verified baselines.",
+            f"Assumptions: {price_basis}; carbon computed deterministically "
+            f"(versioned factors or the intervention's reduction range); the LLM never produces these numbers.",
             f"Overall confidence {_num(evidence.confidence_score, 1)}/100; "
             f"hotspot data quality {_num(evidence.data_quality_score, 1)}/100.",
         ]

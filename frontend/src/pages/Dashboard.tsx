@@ -138,7 +138,7 @@ export function Loading() {
 
 export function DashboardPage() {
   const [sel, setSel] = useState<{ facility_id?: string; reporting_period_id?: string }>({})
-  const { dataset, hotspots, recs, dashboard, error, sources, ids, facilities, facilityPeriods } =
+  const { dataset, hotspots, recs, dashboard, error, sources, ids, facilities, facilityPeriods, activities } =
     usePhase1Data(sel)
   const changeFacility = (facilityId: string) => {
     setFacilitySelection(facilityId)
@@ -317,7 +317,12 @@ export function DashboardPage() {
             <p style={{ fontSize: '.84rem', color: 'var(--legend-ink)', marginTop: 0 }}>
               Facility → process → activity. N2 links stay <span className="mono">[]</span> in Phase 2 unless P4 serves them.
             </p>
-            <DrillMap dataset={dataset} hotspots={hotspots} />
+            {/* BUG-4-06: live mode's /api/context dataset has no activity_data; use
+                the separately-fetched activities group (live or fallback). */}
+            <DrillMap
+              dataset={{ ...dataset, activity_data: activities ?? dataset.activity_data }}
+              hotspots={hotspots}
+            />
             <Pareto items={hotspots.hotspots} />
             <h4 style={{ margin: '14px 0 6px' }}>Scope breakdown</h4>
             <ScopeDonut breakdown={dashboard?.scope_breakdown} total={dash.total_kgco2e} />

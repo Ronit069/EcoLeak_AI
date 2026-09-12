@@ -4,6 +4,10 @@
 > behind the shared `USE_MOCK_DATA` flag (mock remains the default and instant
 > fallback). See `docs/phase2/p4_integration_log.md`, `docs/phase2/p4_shape_diff.md`,
 > and run `python -m tools.phase2_p4_shape_diff`.
+>
+> **Phase 4 (demo-ready):** click-by-click judge script in `docs/phase4/demo_script.md`,
+> defensibility appendix in `docs/phase4/pitch_appendix.md`, and the Phase 4 bug log in
+> `docs/phase4/bugs_found.md`.
 
 Callable, dependency-light Python package implementing Modules I, J, M, Q plus the
 full textile SME demo and the Module J/K edge-case suite. The frozen Phase 0
