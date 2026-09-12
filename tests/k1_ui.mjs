@@ -15,12 +15,20 @@ const b = await chromium.launch();
 
 async function probe(url, shot, label) {
   const p = await b.newPage({ viewport: { width: 1440, height: 950 } });
+  await p.addInitScript(() => {
+    localStorage.setItem('ecoleak.auth', 'stub');
+    localStorage.setItem('ecoleak.organizationId', '0a1b2c3d-0001-4001-8001-000000000001');
+    localStorage.setItem('ecoleak.role', 'SUSTAINABILITY_ANALYST');
+    localStorage.setItem('ecoleak.token', '');
+  });
   await p.goto(url + '/scenarios', { waitUntil: 'domcontentloaded' });
-  await p.waitForTimeout(10000);
+  await p.locator('main').waitFor({ timeout: 30000 });
+  await p.click('button:has-text("RUN DIGITAL TWIN SIMULATION ▶")');
+  await p.waitForTimeout(3000);
   const t = (await p.textContent('main')).replace(/\s+/g, ' ');
-  const engineLabel = t.includes('Engine-verified simulation (K1)');
-  const localLabel = t.includes('computed_via=local_fallback');
-  const bannerScenario = t.includes('scenario-simulate');
+  const engineLabel = t.includes('ENGINE-COMPUTED');
+  const localLabel = t.includes('LOCAL MODEL EVALUATION');
+  const bannerScenario = t.includes('ENGINE UNAVAILABLE');
   const projected = (t.match(/PROJECTED.{0,26}/) || ['none'])[0];
   console.log(`=== ${label} ===`);
   console.log('  engine-label:', engineLabel);
