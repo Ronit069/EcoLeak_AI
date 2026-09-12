@@ -1,9 +1,9 @@
-"""SQL-backed :class:`ActivityDataSource` for the P3 engine (B2).
+﻿"""SQL-backed :class:`ActivityDataSource` for the P3 engine (B2).
 
 Reads the P2 platform tables (``organizations``, ``facilities``,
 ``reporting_periods``, ``processes``, ``activity_data``, ``emission_factors``,
 ``circular_interventions``) with the SAME table and column names as
-``backend/app/models/*`` — in production it reads P2's seeded PostgreSQL
+``backend/app/models/*`` â€” in production it reads P2's seeded PostgreSQL
 schema directly; in tests it runs over a portable SQLite image of the same
 tables. JSONB columns are read as JSON; the portable types here are
 read-compatible (``contracts.schemas`` remains the single source of truth).
@@ -434,4 +434,6 @@ def load_sql_data_source(dsn: str | None = None) -> SQLActivityDataSource:
     dsn = dsn or os.environ.get("ECOLEAK_SQL_DSN")
     if not dsn:
         raise ValueError("load_sql_data_source requires a DSN (or ECOLEAK_SQL_DSN env)")
-    return SQLActivityDataSource(create_engine(dsn, future=True))
+    # F-4/F-11: bounded connect so health/readiness checks fail fast on a dead DB.
+    connect_args = {"connect_timeout": 3} if dsn.startswith("postgresql") else {}
+    return SQLActivityDataSource(create_engine(dsn, future=True, connect_args=connect_args))

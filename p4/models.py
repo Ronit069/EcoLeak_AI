@@ -146,6 +146,10 @@ class FacilityContext(StrictBaseModel):
     process_resources: list[ProcessResourceBaseline]
     tariffs: TariffSet
     conversions: EnergyConversions = Field(default_factory=EnergyConversions)
+    # F-8: True while the demo fixture supplies resource baselines/tariffs;
+    # surfaced per-recommendation as assumptions.data_is_stub so degraded
+    # financials are machine-readable instead of silently presented as real.
+    is_fixture: bool = True
 
 
 class ResourceEmissionFactors(StrictBaseModel):

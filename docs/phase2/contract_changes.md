@@ -149,3 +149,19 @@ flagged for confirmation), P4 (N1 owner — flagged).
 | R7 | Module Q | **Q1/Q2 wired into merged surface** (in-memory store; frozen error shape (`FEEDBACK_VALIDATION` 422)); SQL persistence → Phase-3 backlog owner P2 | additive endpoints (not in api_contract.md originally — now served; catalogued in `process_notes.md` §4) | Q1 201 / Q2 200 / guard 422 frozen shape |
 | R8 | Module H2/H3 | **Phase-3 backlog, owner P3** (needs anomaly persistence) | none | `process_notes.md` §4 |
 | R9 | Branch protection | Admin-gated — required config documented for repo owner (Ronit069); CI rule added so tests must pass | none | `process_notes.md` §2 + `.github/workflows/phase2-ci.yml` |
+
+---
+
+# PHASE 3 READINESS ADDENDUM (branch `phase3-readiness`, executed 2026-09-12)
+
+Closures for the full-system verification findings, with no frozen key renamed
+or removed:
+
+| # | Item | Change | Contract impact | Verification |
+|---|---|---|---|---|
+| R10 | F2 `GET .../calculations` (documented, was unserved) | Implemented on the merged engine router. Calculations are derived deterministically on demand, so GET returns the identical `EmissionCalculation[]` payload as F1 (no persisted job list exists) | api_contract.md F2 row annotated (was documented; now served) | live GET -> 200 `EmissionCalculation[]`, same values as POST |
+| R11 | J3 `PATCH /api/recommendations/{id}` (documented, was unserved) | Implemented with an in-memory status store + transition rule (SUGGESTED -> SHORTLISTED/PLANNED/REJECTED, SHORTLISTED -> PLANNED/REJECTED, PLANNED -> IMPLEMENTED/REJECTED). Invalid status -> 422, invalid transition -> 409, unknown id -> 404 (all frozen shape). SQLAlchemy persistence -> Phase-3 backlog (same deferral decision as Q feedback) | api_contract.md J3 row annotated | live PATCH transitions + negative cases |
+| R12 | F-8 machine-readable degraded-mode label | `impact.assumptions.data_is_stub` (bool) on every J1/J2/M1 recommendation, sourced from `FacilityContext.is_fixture` (default True while the P4 demo tariff fixture supplies baselines). Additive key inside the free-form `assumptions` object only - no envelope key added, no Zod strict-parse change | api_contract.md J1/J2 note; no frozen shape change | live J2 items carry `data_is_stub=true`; frontend notice rendered |
+| R13 | F-4 health | `GET /api/health` now probes DB (`SELECT 1`, bounded 4s) + engine data source; 503 frozen shape (`HEALTH_DEPENDENCY_UNAVAILABLE`) with per-component detail when unhealthy; adds `components` and `X-Request-Id` | additive keys on the healthy path | live: 503 in ~4s with DB down; 200 `{database: ok, engine: ok}` with DB up |
+| R14 | F-13 malformed input | UUID path params typed as `UUID` across P2 routers (FastAPI -> frozen 422); invalid `reason_code` and non-numeric feedback/simulate fields -> 422 frozen shape (no raw 500) | none (error semantics only) | live: malformed UUID -> 422; invalid reason_code -> 422; bad numeric -> 422 |
+| R15 | F-14 observability | Structured request logging (method/path/status/request_id/elapsed_ms) + 500 handler logs cause with request id + traceback; `X-Request-Id` response header | none | live log lines captured; 500 traceback captured with request id |

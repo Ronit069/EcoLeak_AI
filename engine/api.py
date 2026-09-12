@@ -11,20 +11,39 @@ consistent error shape (frozen payload from api_contract.md §28).
 
 from __future__ import annotations
 
-from decimal import Decimal
+import sys
+from decimal import Decimal, InvalidOperation
+from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Body, FastAPI, Request
+from fastapi import APIRouter, Body, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
 from contracts.schemas import Scope
 
 from .config import HotspotWeights
 from .data_source import default_data_source
-from .errors import CarbonPlatformError, EntityNotFoundError, MissingParameterError
+from .errors import (
+    CarbonPlatformError,
+    EntityNotFoundError,
+    MissingParameterError,
+)
 from .serialization import to_jsonable
 from .service import EcoLeakEngine
 from .simulator import InterventionSelection
+
+# Backend auth/guards live in backend/app; make them importable for BOTH the
+# merged app (uvicorn --app-dir backend) and standalone engine runs.
+_BACKEND_DIR = Path(__file__).resolve().parents[1] / "backend"
+if str(_BACKEND_DIR) not in sys.path:
+    sys.path.insert(0, str(_BACKEND_DIR))
+
+from app.errors import PlatformValidationError  # noqa: E402
+from app.guards import (  # noqa: E402  (merged-surface tenant guards, T0-3)
+    context_tenant_guard,
+    facility_tenant_guard,
+    simulate_tenant_guard,
+)
 
 router = APIRouter(tags=["engine"])
 
@@ -48,7 +67,7 @@ def health() -> dict:
     return {"status": "ok", "engine_version": "phase1.0.0"}
 
 
-@router.get("/api/context")
+@router.get("/api/context", dependencies=[Depends(context_tenant_guard)])
 def context() -> dict:
     """Current org/facility/period for the default facility — P1 live-mode
     dataset source (replaces the mock JSON read when USE_MOCKS=false)."""
@@ -63,19 +82,43 @@ def context() -> dict:
     return _json({"organization": org, "facilities": facilities, "reporting_periods": periods})
 
 
-@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/inventory-summary")
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/inventory-summary",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def inventory_summary(facility_id: str, period_id: str) -> dict:
     summary = get_engine().inventory_summary(facility_id, period_id)
     return _json(summary)
 
 
-@router.post("/api/facilities/{facility_id}/reporting-periods/{period_id}/calculations")
+@router.post(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/calculations",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def calculations(facility_id: str, period_id: str, body: dict = Body(default={})) -> list[dict]:
+    return _calculations_payload(facility_id, period_id)
+
+
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/calculations",
+    dependencies=[Depends(facility_tenant_guard)],
+)
+def get_calculations(facility_id: str, period_id: str) -> list[dict]:
+    """F2: calculations are derived on demand from the versioned inputs
+    (same deterministic result as F1's POST), so GET returns the identical
+    ``EmissionCalculation[]`` payload rather than a persisted job list."""
+    return _calculations_payload(facility_id, period_id)
+
+
+def _calculations_payload(facility_id: str, period_id: str) -> list[dict]:
     inventory = get_engine().calculate_inventory(facility_id, period_id)
     return [_json(r.calculation) for r in inventory.records if r.calculation is not None]
 
 
-@router.post("/api/facilities/{facility_id}/reporting-periods/{period_id}/hotspots/detect")
+@router.post(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/hotspots/detect",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def detect_hotspots(facility_id: str, period_id: str, body: dict = Body(default={})) -> dict:
     boundary = None
     if body.get("scope_boundary"):
@@ -91,19 +134,28 @@ def detect_hotspots(facility_id: str, period_id: str, body: dict = Body(default=
     return _json(analysis.result)
 
 
-@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/hotspots")
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/hotspots",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def get_hotspots(facility_id: str, period_id: str) -> dict:
     analysis = get_engine().detect_hotspots(facility_id, period_id)
     # Frozen envelope only (G2).
     return _json(analysis.result)
 
 
-@router.get("/api/facilities/{facility_id}/reporting-periods/{period_id}/circularity-score")
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/circularity-score",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def circularity_score(facility_id: str, period_id: str) -> dict:
     return _json(get_engine().circularity_score(facility_id, period_id).to_dict())
 
 
-@router.post("/api/scenarios/{scenario_id}/simulate")
+@router.post(
+    "/api/scenarios/{scenario_id}/simulate",
+    dependencies=[Depends(simulate_tenant_guard)],
+)
 def simulate(scenario_id: str, body: dict = Body(default={})) -> dict:
     engine = get_engine()
     context = engine.default_context()
@@ -129,12 +181,19 @@ def simulate(scenario_id: str, body: dict = Body(default={})) -> dict:
                 f"Unknown intervention: {item}",
                 {"intervention": item},
             )
+        try:
+            adoption = Decimal(str(item.get("adoption_percentage", 100)))
+        except (InvalidOperation, TypeError, ValueError) as exc:
+            raise PlatformValidationError(
+                "adoption_percentage must be a valid number.",
+                details={"intervention": item},
+            ) from exc
         selections.append(
             InterventionSelection(
                 intervention=iv,
-                adoption_percentage=Decimal(str(item.get("adoption_percentage", 100))),
+                adoption_percentage=adoption,
                 selected=bool(item.get("selected", True)),
-                capex_override=Decimal(str(item["capex_override"])) if item.get("capex_override") is not None else None,
+                capex_override=_body_decimal(item.get("capex_override"), "capex_override"),
             )
         )
 
@@ -146,16 +205,30 @@ def simulate(scenario_id: str, body: dict = Body(default={})) -> dict:
         period_id,
         selections,
         scenario_id=scenario_id,
-        budget_limit=Decimal(str(body["budget_limit"])) if body.get("budget_limit") is not None else None,
-        target_reduction_pct=(
-            Decimal(str(body["target_reduction_pct"])) if body.get("target_reduction_pct") is not None else None
-        ),
+        budget_limit=_body_decimal(body.get("budget_limit"), "budget_limit"),
+        target_reduction_pct=_body_decimal(body.get("target_reduction_pct"), "target_reduction_pct"),
         scope_boundary=scope_boundary,
     )
     return _json(result.to_dict())
 
 
-@router.post("/api/facilities/{facility_id}/anomalies/detect")
+def _body_decimal(value: Any, field: str) -> Decimal | None:
+    """F-13: numeric request fields are 422 in the frozen shape, never 500."""
+    if value is None:
+        return None
+    try:
+        return Decimal(str(value))
+    except (InvalidOperation, TypeError, ValueError) as exc:
+        raise PlatformValidationError(
+            f"{field} must be a valid number.",
+            details={"field": field, "value": str(value)},
+        ) from exc
+
+
+@router.post(
+    "/api/facilities/{facility_id}/anomalies/detect",
+    dependencies=[Depends(facility_tenant_guard)],
+)
 def detect_anomalies(facility_id: str, body: dict = Body(default={})) -> dict:
     engine = get_engine()
     period_id = body.get("reporting_period_id")
