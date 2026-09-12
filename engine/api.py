@@ -19,7 +19,7 @@ from typing import Any
 from fastapi import APIRouter, Body, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from contracts.schemas import Scope
+from contracts.schemas import ReportingPeriodStatus, Scope
 
 from .config import HotspotWeights
 from .data_source import default_data_source
@@ -27,6 +27,7 @@ from .errors import (
     CarbonPlatformError,
     EntityNotFoundError,
     MissingParameterError,
+    PeriodLockedError,
 )
 from .serialization import to_jsonable
 from .service import EcoLeakEngine
@@ -96,6 +97,19 @@ def inventory_summary(facility_id: str, period_id: str) -> dict:
     dependencies=[Depends(facility_tenant_guard)],
 )
 def calculations(facility_id: str, period_id: str, body: dict = Body(default={})) -> list[dict]:
+    # P3-05 / P2-06 fix: api_contract.md F1 — "period not LOCKED/CLOSED unless
+    # versioned". Recalculation on a locked period is refused with the frozen
+    # error shape (409 PERIOD_LOCKED); GET (F2) remains a read.
+    engine = get_engine()
+    period = engine.data_source.get_reporting_period(str(period_id))
+    if period is not None and period.status in {
+        ReportingPeriodStatus.LOCKED,
+        ReportingPeriodStatus.CLOSED,
+    }:
+        raise PeriodLockedError(
+            "Reporting period is locked; calculations require a versioned override.",
+            {"period_id": period_id, "status": period.status.value},
+        )
     return _calculations_payload(facility_id, period_id)
 
 

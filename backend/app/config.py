@@ -42,6 +42,11 @@ class Settings(BaseSettings):
 
     # Phase 1 uses a stub auth layer ("stub"); Phase 2 swaps in "jwt".
     auth_mode: str = "stub"
+    # GA-02 fix: stub is a development-only trusted-header mode. Outside
+    # development it must be opted into explicitly (escape hatch for demos);
+    # otherwise the app refuses to start rather than run header-spoofable auth
+    # in production.
+    allow_stub_auth: bool = False
     # No default secret (D2): must come from .env / environment. With
     # auth_mode=jwt a missing or placeholder secret fails fast at load time so
     # it can never leak into any deployed configuration.
@@ -71,6 +76,18 @@ class Settings(BaseSettings):
             raise ValueError(
                 "jwt_secret must be set via environment in non-development "
                 f"environments (got environment={self.environment!r}); refusing to start."
+            )
+        # GA-02: never run the trusted-header stub in a non-development
+        # environment unless the operator explicitly opts in.
+        if (
+            self.environment != "development"
+            and self.auth_mode == "stub"
+            and not self.allow_stub_auth
+        ):
+            raise ValueError(
+                "auth_mode='stub' is a development-only trusted-header mode and "
+                f"is refused with environment={self.environment!r}; set AUTH_MODE=jwt "
+                "(or ALLOW_STUB_AUTH=true to override for a controlled demo)."
             )
         return self
 

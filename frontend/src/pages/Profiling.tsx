@@ -8,7 +8,7 @@ import { profileFormSchema, type ProfileForm } from '../lib/zod'
 // Zod mirrors contracts/schemas.py: production ≥ 0 (=0 allowed, blocks intensity),
 // working_days ≤ 366, working_hours ≤ 24, currency ^[A-Z]{3}$, end_date ≥ start_date.
 export function ProfilingPage() {
-  const { dataset, error, ready, sources } = usePhase1Data()
+  const { dataset, error, ready, sources, ids } = usePhase1Data()
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileFormSchema),
@@ -24,8 +24,8 @@ export function ProfilingPage() {
   if (error) return <div className="notice"><b>Failed to load.</b> {error}</div>
   if (!dataset || !ready) return <Loading />
   const org = dataset.organization
-  const fac = dataset.facilities[0]
-  const period = dataset.reporting_periods[0]
+  const fac = dataset.facilities.find(f => f.id === ids.facility_id) ?? dataset.facilities[0]
+  const period = dataset.reporting_periods.find(p => p.id === ids.reporting_period_id) ?? dataset.reporting_periods[0]
 
   // Seed once from mock (org/facility/period read).
   if (!form.formState.isDirty && form.getValues('industry_sector') === '' && org.name) {

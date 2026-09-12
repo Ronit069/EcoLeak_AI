@@ -28,11 +28,15 @@ from contracts.schemas import (
 )
 from engine.api import get_engine
 from engine.serialization import to_jsonable
-from p4.demo.run_demo import _load_json, _resource_factors
+from p4.data_source import (
+    build_facility_context,
+    load_facility_dataset,
+    resource_factors_from_factors,
+)
 from p4.engine import RecommendationConstraints, generate_with_diagnostics
 from p4.explainability import TemplateExplainer
 from p4.feedback import FeedbackError, InMemoryFeedbackStore
-from p4.models import FacilityContext, RejectionReasonCode
+from p4.models import RejectionReasonCode
 from p4.serialization import to_api_dict
 
 # Backend auth/guards live in backend/app; make them importable for BOTH the
@@ -55,30 +59,6 @@ router = APIRouter(tags=["recommendations"])
 _feedback_store = InMemoryFeedbackStore()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-MOCKS_DIR = REPO_ROOT / "mocks"
-DEMO_CONTEXT = Path(__file__).resolve().parent / "demo" / "demo_context.json"
-
-_DATASET_CACHE: dict[str, Any] | None = None
-
-
-def _dataset() -> dict[str, Any]:
-    global _DATASET_CACHE
-    if _DATASET_CACHE is None:
-        _DATASET_CACHE = _load_json(MOCKS_DIR / "mock_dataset.json")
-    return _DATASET_CACHE
-
-
-def _context() -> FacilityContext:
-    return FacilityContext.model_validate(_load_json(DEMO_CONTEXT))
-
-
-def _facility_and_org() -> tuple[Organization, Facility, list[Process]]:
-    ds = _dataset()
-    return (
-        Organization.model_validate(ds["organization"]),
-        Facility.model_validate(ds["facilities"][0]),
-        [Process.model_validate(item) for item in ds["processes"]],
-    )
 
 
 def _require_decimal(value: Any, field: str) -> Optional[Decimal]:
@@ -99,17 +79,26 @@ def _run_ranker(
     reporting_period_id: str,
     constraints: Optional[RecommendationConstraints],
 ) -> RecommendationGenerationResult:
-    """Hotspots (live P3 engine) -> P4 ranker -> frozen J2 envelope."""
+    """Hotspots (live P3 engine) -> P4 ranker -> frozen J2 envelope.
+
+    GA-01 / P4-C1 fix: facility, organization, processes and resource baselines
+    are resolved from the LIVE data source for the requested facility (the mock
+    demo facility/context was previously hardcoded here, so every non-demo
+    facility raised the engine's facility-match guard and returned 500).
+    """
     engine = get_engine()
     hotspots = engine.hotspot_result(facility_id, reporting_period_id)
-    organization, facility, processes = _facility_and_org()
-    factors = _resource_factors(_dataset())
+    organization, facility, processes = load_facility_dataset(engine, facility_id)
+    factors = resource_factors_from_factors(
+        engine.data_source.get_emission_factors(), facility.country
+    )
+    context = build_facility_context(engine, facility_id, reporting_period_id)
     run = generate_with_diagnostics(
         hotspots,
         facility,
         organization=organization,
         processes=processes,
-        context=_context(),
+        context=context,
         emission_factors=factors,
         constraints=constraints,
         explainer=TemplateExplainer(),
@@ -146,6 +135,9 @@ def _dashboard_payload(facility_id: str, reporting_period_id: str) -> dict:
         "potential_annual_saving": potential_saving,
         "last_calculated_at": inventory.generated_at.isoformat(),
         "empty_state": len(hotspots.hotspots) == 0,
+        # P1-05: expose unresolved activity count so the UI can show that the
+        # totals exclude rows with no matching emission factor.
+        "unresolved_count": len(inventory.unresolved),
     }
     return to_jsonable(payload)
 

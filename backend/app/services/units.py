@@ -192,7 +192,11 @@ def normalize(
     if decimal_value != 0:
         factor = (normalized_value / decimal_value).quantize(Decimal("0.0000000001"))
 
-    label = _FAMILIES[to_family][0]
+    # GA-05 fix: label with the ACTUAL target unit when one is supplied. The
+    # family base label was previously used unconditionally, so
+    # normalize(1, "kWh", "MWh") returned value 0.001 labelled "kWh".
+    explicit_target = to_unit is not None and str(to_unit).strip() != ""
+    label = str(to_unit).strip() if explicit_target else _FAMILIES[to_family][0]
     return NormalizationResult(
         original_value=decimal_value,
         original_unit=from_unit,

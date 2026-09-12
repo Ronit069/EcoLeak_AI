@@ -80,7 +80,7 @@ export function ProcessesPage() {
                     <b className="mono">{p.sequence_no}. {p.name}</b>
                     <span style={{ display: 'block', marginTop: 4 }}><SeverityBadge severity={sev} /></span>
                     <small style={{ display: 'block', color: 'var(--legend)', marginTop: 2 }}>
-                      impact: {hotspotByProcess.has(p.id) ? 'from hotspot mock' : 'stub Low'}
+                        impact: {hotspotByProcess.has(p.id) ? 'from hotspot' : 'stub Low'}
                     </small>
                   </span>
                 </button>
@@ -103,7 +103,7 @@ export function ProcessesPage() {
                 {selectedHotspot.explanation && <p style={{ fontSize: '.86rem' }}>{selectedHotspot.explanation}</p>}
               </>
             ) : (
-              <p style={{ fontSize: '.86rem' }}>No hotspot for this process in the mock (e.g. Transportation) — explicit gap, not a zero.</p>
+              <p style={{ fontSize: '.86rem' }}>No hotspot for this process in this period (e.g. Transportation) — explicit gap, not a zero.</p>
             )}
             <h4 style={{ margin: '10px 0 6px' }}>Activities ({selectedActivities.length})</h4>
             {selectedActivities.length === 0 ? (
@@ -192,7 +192,7 @@ export function ProcessesPage() {
           <div className="field">
             <label htmlFor="px-hours">Operating hours</label>
             <input id="px-hours" value={extras.operating_hours} onChange={setEx('operating_hours')} placeholder="16 h/day…" />
-            <small>carbon_impact_level stubs to Low until P3 supplies it; hotspot severity shown where the mock matches.</small>
+            <small>carbon_impact_level stubs to Low until P3 supplies it; hotspot severity shown where a hotspot matches.</small>
           </div>
           <button className="btn btn-primary" type="submit">Add to map</button>
           <p style={{ fontSize: '.78rem', color: 'var(--legend)' }}>Live: POST /api/facilities/{'{id}'}/processes · 201 Process</p>

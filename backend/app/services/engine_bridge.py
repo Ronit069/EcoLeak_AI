@@ -85,19 +85,19 @@ def real_recommendations(
     """Best-effort live J (P4). Returns None if the P4 ranker is unavailable."""
     try:
         from engine.serialization import to_jsonable
-        from p4.demo.run_demo import _load_json, _resource_factors
+        from p4.data_source import (
+            build_facility_context,
+            load_facility_dataset,
+            resource_factors_from_factors,
+        )
         from p4.engine import generate_with_diagnostics
         from p4.explainability import TemplateExplainer
-        from p4.models import FacilityContext
 
-        repo_root = _REPO_ROOT
-        dataset = _load_json(repo_root / "mocks" / "mock_dataset.json")
-        context = FacilityContext.model_validate(
-            _load_json(repo_root / "p4" / "demo" / "demo_context.json")
-        )
-        organization = engine.data_source.get_organization()
-        facility = engine.data_source.get_facility(facility_id)
-        processes = engine.data_source.get_processes(facility_id)
+        # GA-01/P4-C1 fix: previously these came from mocks/mock_dataset.json
+        # and p4/demo/demo_context.json, so a non-demo facility raised
+        # "context.facility_id does not match facility.id" and the Module P
+        # recommendations section was silently dropped.
+        organization, facility, processes = load_facility_dataset(engine, facility_id)
         if organization is None or facility is None:
             return None
         hotspots = engine.hotspot_result(facility_id, period_id)
@@ -106,8 +106,10 @@ def real_recommendations(
             facility,
             organization=organization,
             processes=processes,
-            context=context,
-            emission_factors=_resource_factors(dataset),
+            context=build_facility_context(engine, facility_id, period_id),
+            emission_factors=resource_factors_from_factors(
+                engine.data_source.get_emission_factors(), facility.country
+            ),
             constraints=None,
             explainer=TemplateExplainer(),
         )

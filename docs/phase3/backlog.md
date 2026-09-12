@@ -16,3 +16,26 @@ owner and the reason it is deferred.
 | `frontend` `npm run validate` points at a missing `scripts/validate-mocks.ts` | F-17 | Script hygiene; mock validation runs in CI via the repo-root validators | P1 |
 | Loosely-typed contract subtrees (`dict[str, Any]` in `largest_hotspot`, `K1 interventions[]/issues[]`) | F-18 | No consumer breakage; formal typing is a contract-evolution task | P4/P1 |
 | Branch protection enforcement on `main` | T0-1 step 5 | Requires repo-owner admin; settings documented in `docs/phase3/READINESS.md` | Ronit069 |
+
+---
+
+## Phase-3 fix pass update (branch `phase3-fixes`)
+
+**Closed** (see `docs/phase3/fix_report.md`): GA-01/P4-C1, GA-02, GA-04/P3-05,
+GA-05, GA-06/P3-01, GA-07, P1-01..P1-09, P2-03.
+
+**Still open (owner):**
+| Item | Owner | Why |
+|---|---|---|
+| Branch protection on `main` (GA-03) | Ronit069 | requires repo-owner admin; settings in READINESS.md §1 |
+| P2-01 residual: anonymous reads in **stub** mode | P2 | dev-only mode; GA-02 blocks stub outside development |
+| P2-04 populate `source_url` for 8 fixture factors | P2 | provenance polish |
+| P2-05 / J3-Q persistence (in-memory stores) | P2 | store swap |
+| P3-02 factor validity window | P3 | methodology/policy decision |
+| P3-03 region-specificity scoring | P3 | changes factor selection |
+| P3-04 renewable/on-site scope accounting | P3 | accounting-methodology decision |
+| P3-06 confidence penalty on fallback matches | P3 | numeric semantics |
+| P3-07 calculation/hotspot persistence + `CALCULATION_RERUN` | P3+P2 | cross-team write path |
+| P3-08 sourced/versioned cost data | P2+P3 | needs P2 cost feed |
+| P3-09..P3-25 (biogenic, feedstock, GWP, reweight, currency, baselines, L-projection, severity vocabulary, H2/H3) | P3 | each changes semantics / needs a decision |
+| F-9/F-10/F-11 (provenance polish, distributed rate limiting, query timeouts), F-16/F-17/F-18, Module H/Q persistence | P2/P4/P1 | previously deferred; unchanged |

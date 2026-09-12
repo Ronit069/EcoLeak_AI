@@ -61,3 +61,10 @@ def test_missing_unit_is_rejected():
 def test_negative_value_is_rejected():
     with pytest.raises(InvalidUnitError):
         units.normalize(-1, "kg")
+
+
+def test_explicit_target_unit_labels_target():
+    # GA-05: an explicit to_unit must label the response with THAT unit.
+    result = units.normalize(1, "kWh", "MWh")
+    assert result.normalized_value == Decimal("0.001")
+    assert result.normalized_unit == "MWh"

@@ -489,6 +489,9 @@ class DashboardResponse(StrictBaseModel):
     potential_annual_saving: Optional[Decimal] = None
     last_calculated_at: Optional[datetime] = None
     empty_state: bool = False
+    # P1-05 (Phase 3): number of activity rows the engine could not resolve to
+    # an emission factor for this period (excluded from the totals). Additive.
+    unresolved_count: int = Field(default=0, ge=0)
 
 
 class ScenarioSimulationEnvelope(StrictBaseModel):

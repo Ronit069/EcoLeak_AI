@@ -76,3 +76,11 @@ class EntityNotFoundError(CarbonPlatformError):
 class MissingParameterError(CarbonPlatformError):
     error_code = "MISSING_PARAMETER"
     severity = "WARNING"
+
+
+class PeriodLockedError(CarbonPlatformError):
+    """P3-05 fix: mutations on a LOCKED/CLOSED period are refused."""
+
+    error_code = "PERIOD_LOCKED"
+    severity = "WARNING"
+    status_code = 409

@@ -165,3 +165,23 @@ or removed:
 | R13 | F-4 health | `GET /api/health` now probes DB (`SELECT 1`, bounded 4s) + engine data source; 503 frozen shape (`HEALTH_DEPENDENCY_UNAVAILABLE`) with per-component detail when unhealthy; adds `components` and `X-Request-Id` | additive keys on the healthy path | live: 503 in ~4s with DB down; 200 `{database: ok, engine: ok}` with DB up |
 | R14 | F-13 malformed input | UUID path params typed as `UUID` across P2 routers (FastAPI -> frozen 422); invalid `reason_code` and non-numeric feedback/simulate fields -> 422 frozen shape (no raw 500) | none (error semantics only) | live: malformed UUID -> 422; invalid reason_code -> 422; bad numeric -> 422 |
 | R15 | F-14 observability | Structured request logging (method/path/status/request_id/elapsed_ms) + 500 handler logs cause with request id + traceback; `X-Request-Id` response header | none | live log lines captured; 500 traceback captured with request id |
+
+---
+
+# PHASE 3 AUDIT FIX ADDENDUM (branch `phase3-fixes`, executed 2026-09-12)
+
+Closures for the Phase-3 audit findings (general + P1). No frozen key removed.
+
+| # | Item | Change | Contract impact | Verification |
+|---|---|---|---|---|
+| R16 | GA-01 / P4-C1 (CRITICAL) | `p4/api.py::_run_ranker` + `engine_bridge.real_recommendations` now resolve facility/org/processes/context from the LIVE data source (`p4/data_source.build_facility_context`, `load_facility_dataset`, `resource_factors_from_factors`); the mock demo facility/context is no longer hardcoded | none (behavior fix) | non-demo facility: recommendations/dashboard 200; report recommendations section REAL |
+| R17 | GA-02 | `AUTH_MODE=stub` refused when `ENVIRONMENT != development` unless `ALLOW_STUB_AUTH=true` | none (config) | tests `test_ga02_*` |
+| R18 | GA-04 / P3-05 | F1 `POST .../calculations` refuses `LOCKED`/`CLOSED` periods with `409 PERIOD_LOCKED` (frozen shape); GET (F2) remains a read | api_contract F1 row annotated | live 409; `test_ga04_*` |
+| R19 | GA-05 | `units.normalize` labels the ACTUAL target unit when `to_unit` is supplied (was family base) | D1 semantics corrected | `test_explicit_target_unit_labels_target` |
+| R20 | GA-06 / P3-01 | `mocks/mock_dataset.json` now carries the full 19-entry intervention library (was 5) | none (fixture) | `test_ga06_mock_dataset_carries_full_library`; K1 mock path resolves library-only ids |
+| R21 | P1-04 | 5xx handler re-applies CORS + security headers + `X-Request-Id` (Starlette runs it outside CORSMiddleware) | none | `test_p1_04_5xx_carries_cors_and_request_id` |
+| R22 | P1-05 | `DashboardResponse.unresolved_count` (additive) + UI notice; `p4` emits `len(inventory.unresolved)` | api_contract N1 row annotated | live `unresolved_count=2`; `test_p1_05_*` |
+| R23 | P1-01/P1-02/P1-03/P1-07/P1-08 | Dashboard: all-scope total labelled + Scope 1+2 denominator shown, division-by-zero guarded, mock-source KPIs labelled, "quality" disambiguated; Processes stale "mock" wording removed | none | frontend build + live run |
+| R24 | P1-06 | New Reports page (`/reports`): generate, list, inspect provenance/quality, export JSON/CSV | new UI route | frontend build |
+| R25 | P1-09 | Facility selector (persisted; bootstrap honours it); active-facility display fixed on Dashboard/Profiling/DrillMap | none | frontend build |
+| R26 | P2-03 | Emission-factor create/version audit rows now store full JSON-safe before/after snapshots | none | backend suite 77/77 |

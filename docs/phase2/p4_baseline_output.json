@@ -80,7 +80,8 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -131,7 +132,8 @@
             "opex_change_pct_mid": "0.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -182,7 +184,8 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -233,7 +236,8 @@
             "opex_change_pct_mid": "-0.5",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -284,7 +288,8 @@
             "opex_change_pct_mid": "0.5",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -336,6 +341,7 @@
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
             "context_available": true,
+            "data_is_stub": true,
             "payback_note": "immediate payback (zero CAPEX)"
           },
           "confidence_score": 79.04
@@ -387,7 +393,8 @@
             "opex_change_pct_mid": "-3.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -438,7 +445,8 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -489,7 +497,8 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -540,7 +549,8 @@
             "opex_change_pct_mid": "2.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -591,7 +601,8 @@
             "opex_change_pct_mid": "-1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -642,7 +653,8 @@
             "opex_change_pct_mid": "-0.5",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -693,7 +705,8 @@
             "opex_change_pct_mid": "1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -744,7 +757,8 @@
             "opex_change_pct_mid": "-2.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -795,7 +809,8 @@
             "opex_change_pct_mid": "0.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -846,7 +861,8 @@
             "opex_change_pct_mid": "-0.5",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -897,7 +913,8 @@
             "opex_change_pct_mid": "1.0",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
@@ -948,7 +965,8 @@
             "opex_change_pct_mid": "4.5",
             "co2_saving_basis": "resource-based: quantity saved x versioned emission factor (deterministic P4 estimator until P3 baselines are live)",
             "cost_per_tonne_co2_avoided_basis": "estimated CAPEX / first-year tCO2e avoided",
-            "context_available": true
+            "context_available": true,
+            "data_is_stub": true
           },
           "confidence_score": 79.04
         }
