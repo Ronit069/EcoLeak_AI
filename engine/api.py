@@ -16,6 +16,8 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+import os
+
 from fastapi import APIRouter, Body, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
@@ -180,7 +182,13 @@ def circularity_score(facility_id: str, period_id: str) -> dict:
 
 
 def _library_intervention(intervention_id: str):
-    """Resolve an intervention id against the frozen P4 library (GA-06)."""
+    """Resolve an intervention id against the frozen P4 library (GA-06).
+
+    ``K1_LIBRARY_FALLBACK=false`` disables the fallback so the K1 adversarial
+    red leg can still construct a genuinely non-resolving backend (the
+    library fix must not silently mask a broken resolver in tests/CI)."""
+    if os.environ.get("K1_LIBRARY_FALLBACK", "true").lower() == "false":
+        return None
     from seed_interventions import load_library_contracts
 
     try:
