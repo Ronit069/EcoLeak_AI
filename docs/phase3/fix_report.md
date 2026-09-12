@@ -70,3 +70,20 @@ now closed with executed evidence. The remaining items are methodology/scope
 decisions queued with owners; they were **not** silently altered. Non-demo
 facilities are now functional end-to-end, so the UI is no longer restricted to
 the seed demo.
+
+---
+
+## 5. P4 audit follow-up (after PR #8; audit at `main` @ `4b2eb9e`)
+
+| P4 finding | Sev | Status | Evidence |
+|---|---|---|---|
+| P4-C1 (mock demo facility/context) | CRITICAL | **Closed** (= GA-01) | non-demo J2/N1 200; report recs REAL |
+| P4-H2 (`engine_bridge` mock factors/context) | HIGH | **Closed** | Module P recs section REAL for non-demo |
+| P4-H1 (negative-net recycling crash) | HIGH | **Closed** | `impact.estimated_co2_saving_kg` floored at 0; signed value in `assumptions.net_co2_saving_kg_signed` + `additional_emissions_kg`; `test_p4_h1_negative_net_recycling_does_not_crash` |
+| P4-M1 (`feedback_type` 500) | MEDIUM | **Closed** | 422 frozen; `test_p4_m1_invalid_feedback_type_is_422_frozen` |
+| P4-M3 (feedback for unknown rec) | MEDIUM | **Closed** | 404 frozen; `test_p4_m3_feedback_for_unknown_recommendation_is_404` |
+| P4-L6 (unvalidated J2 filters) | LOW | **Closed** | 422; `test_p4_l6_invalid_filters_are_422` |
+| P4-M2 (Q1/Q2 shape deviations) | MEDIUM | **Documented** | contract addendum R31 |
+| P4-M4..M11, P4-L1..L9 | MEDIUM/LOW | **Open (owner P4)** | `docs/phase3/backlog.md` (methodology/feature scope) |
+
+**Suites after P4 fixes:** root `pytest` **168 passed**; backend on PostgreSQL **80 passed**; `ruff` clean.
