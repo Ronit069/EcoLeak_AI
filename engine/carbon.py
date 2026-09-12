@@ -302,16 +302,20 @@ class CarbonAccountingEngine:
             scored.append(
                 (
                     sim,
-                    region_rank.get(region, 0) if self.config.prefer_region_match else 1,
-                    window_rank.get(window, 1) if self.config.prefer_validity_window else 1,
                     year,
                     version_rank,
                     f.version,
+                    region_rank.get(region, 0) if self.config.prefer_region_match else 1,
+                    window_rank.get(window, 1) if self.config.prefer_validity_window else 1,
                     f,
                     region,
                     window,
                 )
             )
+        # Region/validity are LAST-resort tie-breakers: they must not reorder a
+        # clearly better description/year/version match (that would silently
+        # change established totals). Their substantive effect is the recorded
+        # flag + confidence penalty below.
         scored.sort(key=lambda x: x[:6], reverse=True)
         (best_sim, _, _, _, _, _, best, region, window) = scored[0]
         if best_sim < self.config.factor_match_threshold:
