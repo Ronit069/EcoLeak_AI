@@ -10,9 +10,9 @@ export function RecommendationsPage() {
       <div className="page-head">
         <div>
           <h1>Recommendations</h1>
-          <p>Budget {recs.budget_limit?.toLocaleString('en-IN')} INR · {recs.recommendations.length} ranked interventions · LLM explains only, never invents numbers</p>
+          <p>Budget {recs.budget_limit?.toLocaleString('en-IN')} INR · {recs.recommendations.length} ranked interventions (live J2 ranks the full library) · LLM explains only, never invents numbers</p>
         </div>
-        <span className="provenance">J2 frozen · final_score weighted · confidence 0–100</span>
+        <span className="provenance">J2 live-with-fallback · final_score weighted · confidence 0–100</span>
       </div>
       {recs.recommendations.map(r => <RecommendationPlate key={r.id} rec={r} />)}
     </>

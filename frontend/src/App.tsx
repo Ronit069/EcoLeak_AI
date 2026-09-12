@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { NavLink, Route, Routes } from 'react-router-dom'
 import { DashboardPage } from './pages/Dashboard'
 import { RecommendationsPage } from './pages/Recommendations'
@@ -5,7 +6,10 @@ import { ProcessesPage } from './pages/Processes'
 import { DataInputPage } from './pages/DataInput'
 import { ProfilingPage } from './pages/Profiling'
 import { ScenariosPage } from './pages/Scenarios'
-import { useMockBadge } from './lib/api'
+import {
+  getFallbackGroups, resolveMockMode, setMockModeOverride, subscribeFallbacks,
+  subscribeMockMode, usePhase2ModeLabel,
+} from './lib/api'
 
 function Icon({ d }: { d: string }) {
   return (
@@ -25,6 +29,45 @@ const LINKS = [
   { to: '/scenarios', label: 'Scenarios', icon: 'M4 19V5 M4 15c4-8 6 2 10-6 2-4 3-4 6-4 M4 19h16' }
 ]
 
+/**
+ * Phase 2: "using demo data" banner. Appears when USE_MOCK_DATA=mock mode
+ * (forced) or when any endpoint group has fallen back to mocks in auto mode.
+ * Also exposes the runtime mode toggle (localStorage override) so a demo or
+ * audit check can force either side without rebuilding.
+ */
+export function DemoDataBanner() {
+  const [groups, setGroups] = useState<string[]>(getFallbackGroups())
+  const [mode, setMode] = useState(resolveMockMode())
+  const [tick, setTick] = useState(0)
+  useEffect(() => subscribeFallbacks(() => { setGroups(getFallbackGroups()); setTick(t => t + 1) }), [])
+  useEffect(() => subscribeMockMode(() => setMode(resolveMockMode())), [])
+  void tick
+
+  const forcedMock = mode === 'mock'
+  const fellBack = groups.length > 0
+  if (!forcedMock && !fellBack) return null
+
+  const next = (m: typeof mode) => { setMockModeOverride(m); setMode(m) }
+  return (
+    <div role="status" aria-live="polite"
+      style={{
+        background: '#FFF4E0', border: '1px solid #E4A11B', color: '#5C4400',
+        borderRadius: 10, padding: '8px 14px', marginBottom: 14,
+        display: 'flex', gap: 12, alignItems: 'center', flexWrap: 'wrap', fontSize: '.86rem',
+      }}>
+      <b>Using demo data</b>
+      {forcedMock
+        ? <span>USE_MOCK_DATA is forced to mock mode — Phase 1 frozen payloads shown.</span>
+        : <span>live API unavailable for: <b>{groups.join(', ')}</b> — fallen back to Phase 1 mocks for those groups.</span>}
+      <span style={{ marginLeft: 'auto', display: 'inline-flex', gap: 6 }}>
+        <button className="btn btn-ghost" style={{ padding: '3px 10px', fontSize: '.76rem' }} onClick={() => next('live')}>Force live</button>
+        <button className="btn btn-ghost" style={{ padding: '3px 10px', fontSize: '.76rem' }} onClick={() => next('mock')}>Force mock</button>
+        <button className="btn btn-ghost" style={{ padding: '3px 10px', fontSize: '.76rem' }} onClick={() => { localStorage.removeItem('ecoleak.useMockData'); next('auto') }}>Auto</button>
+      </span>
+    </div>
+  )
+}
+
 export function App() {
   return (
     <div className="shell">
@@ -43,14 +86,15 @@ export function App() {
           ))}
         </nav>
         <div className="rail-foot">
-          <span className="mode-pill"><span className="mode-dot" />{useMockBadge()}</span>
+          <span className="mode-pill"><span className="mode-dot" />{usePhase2ModeLabel()}</span>
           <p style={{ margin: '10px 0 0' }}>
-            Frozen contracts · Shakti Textiles mock · INR · swap to G2/J2/N1 without rewrites.
+            Phase 2 live API with per-group mock fallback · USE_MOCK_DATA gate · G2/J2/N1/N2/B2/C3/K1.
           </p>
         </div>
       </aside>
       <div className="main">
         <main className="content">
+          <DemoDataBanner />
           <Routes>
             <Route path="/" element={<DashboardPage />} />
             <Route path="/recommendations" element={<RecommendationsPage />} />
@@ -58,11 +102,11 @@ export function App() {
             <Route path="/data" element={<DataInputPage />} />
             <Route path="/profiling" element={<ProfilingPage />} />
             <Route path="/scenarios" element={<ScenariosPage />} />
-            <Route path="*" element={<div className="notice"><b>Not found.</b> This Phase 1 build ships six routes only.</div>} />
+            <Route path="*" element={<div className="notice"><b>Not found.</b> This build ships six routes only.</div>} />
           </Routes>
           <footer style={{ marginTop: 34, fontSize: '.76rem', color: 'var(--legend)' }}>
-            Phase 1 operates on <span className="mono">mocks/*.json</span> (validated 9/9). Live swap map: hotspots → G2,
-            recommendations → J2, dashboard → N1, leak-map → N2. Reports PDF returns 501 until Phase 2.
+            Phase 2 · USE_MOCK_DATA gate (auto: live → per-group mock fallback). Live map: A2/A5/A9 · B2 · C3 · G2 · J2 · M1 · N1 · N2 · K1.
+            Integration log: <span className="mono">docs/phase2/p1_integration_log.md</span>
           </footer>
         </main>
       </div>

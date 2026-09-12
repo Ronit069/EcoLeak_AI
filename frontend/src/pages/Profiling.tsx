@@ -8,7 +8,7 @@ import { profileFormSchema, type ProfileForm } from '../lib/zod'
 // Zod mirrors contracts/schemas.py: production ≥ 0 (=0 allowed, blocks intensity),
 // working_days ≤ 366, working_hours ≤ 24, currency ^[A-Z]{3}$, end_date ≥ start_date.
 export function ProfilingPage() {
-  const { dataset, error } = usePhase1Data()
+  const { dataset, error, ready, sources } = usePhase1Data()
   const [savedMsg, setSavedMsg] = useState<string | null>(null)
   const form = useForm<ProfileForm>({
     resolver: zodResolver(profileFormSchema),
@@ -22,7 +22,7 @@ export function ProfilingPage() {
     }
   })
   if (error) return <div className="notice"><b>Failed to load.</b> {error}</div>
-  if (!dataset) return <Loading />
+  if (!dataset || !ready) return <Loading />
   const org = dataset.organization
   const fac = dataset.facilities[0]
   const period = dataset.reporting_periods[0]
@@ -49,7 +49,7 @@ export function ProfilingPage() {
       <div className="page-head">
         <div>
           <h1>Factory profile</h1>
-          <p>{org.name} · A1–A9 seeded read + validated edit · tenant ownership checked on every live call</p>
+          <p>{org.name} · A1–A9 · source: {sources.dataset === 'live' ? 'live API (/api/context)' : 'demo data (mock fallback)'}</p>
         </div>
         <span className="provenance">RHF + Zod · end_date ≥ start_date · currency ^[A-Z]{'{3}'}$</span>
       </div>

@@ -53,7 +53,7 @@ function validateRow(rowIdx: number, data: Record<string, string>): PreviewRow['
 // non-negative values, unit allow-list hint, ESTIMATED caps confidence note.
 
 export function DataInputPage() {
-  const { dataset, error } = usePhase1Data()
+  const { dataset, processes, activities, error } = usePhase1Data()
   const [form, setForm] = useState({
     process_id: '', activity_category: 'ELECTRICITY', activity_subcategory: '',
     original_value: '', original_unit: 'kWh',
@@ -105,14 +105,14 @@ export function DataInputPage() {
     reader.readAsText(file)
   }
   if (error) return <div className="notice"><b>Failed to load.</b> {error}</div>
-  if (!dataset) return <Loading />
+  if (!dataset || !processes) return <Loading />
 
   return (
     <>
       <div className="page-head">
         <div>
           <h1>Factory data capture</h1>
-          <p>{dataset.activity_data.length} activity records in mock · kg↔tonne and m³ exercise the Pint path · diesel record is the litre case</p>
+          <p>{(activities ?? []).length} activity records · kg↔tonne and m³ exercise the Pint path · diesel record is the litre case</p>
         </div>
         <span className="provenance">C1–C4 · D1 normalize · D2 quality 78.4</span>
       </div>
@@ -141,7 +141,7 @@ export function DataInputPage() {
             if (form.measured_or_estimated === 'ESTIMATED')
               errs.push('Note: ESTIMATED values ship with lower confidence and OCR-derived rows are flagged.')
             setIssues(errs)
-            const proc = dataset.processes.find(p => p.id === form.process_id)?.name ?? 'process'
+            const proc = processes.find(p => p.id === form.process_id)?.name ?? 'process'
             setSaved(s => [`${form.activity_subcategory} · ${form.original_value} ${form.original_unit} → ${proc}`, ...s])
           }}
         >
@@ -151,7 +151,7 @@ export function DataInputPage() {
               <label htmlFor="f-proc">Process</label>
               <select id="f-proc" value={form.process_id} onChange={e => setForm({ ...form, process_id: e.target.value })}>
                 <option value="">Select…</option>
-                {dataset.processes.map(p => <option key={p.id} value={p.id}>{p.sequence_no}. {p.name}</option>)}
+                {processes.map(p => <option key={p.id} value={p.id}>{p.sequence_no}. {p.name}</option>)}
               </select>
             </div>
             <div className="field">
@@ -269,7 +269,7 @@ export function DataInputPage() {
               <table className="data">
                 <thead><tr><th>Subcategory</th><th>Category</th><th className="n">Value</th></tr></thead>
                 <tbody>
-                  {dataset.activity_data.slice(0, 8).map(a => (
+                  {(activities ?? []).slice(0, 8).map(a => (
                     <tr key={a.id}><td>{a.activity_subcategory}</td><td>{a.activity_category}</td>
                       <td className="n mono">{a.original_value} {a.original_unit}</td></tr>
                   ))}
