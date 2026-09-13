@@ -484,11 +484,15 @@ class DashboardResponse(StrictBaseModel):
     carbon_intensity: Optional[Decimal] = None
     production_unit: Optional[str] = Field(default=None, max_length=30)
     largest_hotspot: Optional[dict[str, Any]] = None
+    top_actionable_hotspot_id: Optional[UUID] = None
     circularity_score: Optional[Decimal] = Field(default=None, ge=0, le=100)
     potential_reduction_kgco2e: Decimal = Field(ge=0)
     potential_annual_saving: Optional[Decimal] = None
     last_calculated_at: Optional[datetime] = None
     empty_state: bool = False
+    # P1-05 (Phase 3): number of activity rows the engine could not resolve to
+    # an emission factor for this period (excluded from the totals). Additive.
+    unresolved_count: int = Field(default=0, ge=0)
 
 
 class ScenarioSimulationEnvelope(StrictBaseModel):

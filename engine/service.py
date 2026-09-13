@@ -71,12 +71,17 @@ class EcoLeakEngine:
         facility = self.facility(facility_id)
         activity = self.data_source.get_activity_data(facility_id, reporting_period_id)
         factors = self.data_source.get_emission_factors()
+        # P3-02: pass the period window so out-of-window factors are de-prioritised
+        # and flagged (tolerate a missing period so ad-hoc calls still work).
+        period = self.data_source.get_reporting_period(reporting_period_id)
         inventory = self.carbon.calculate(
             facility=facility,
             reporting_period_id=reporting_period_id,
             activity_data=activity,
             emission_factors=factors,
             generated_at=generated_at,
+            period_start=getattr(period, "start_date", None),
+            period_end=getattr(period, "end_date", None),
         )
         self._inventory_cache[(facility_id, reporting_period_id)] = inventory
         return inventory
@@ -159,6 +164,16 @@ class EcoLeakEngine:
         return self.circularity.calculate(inventory=inventory, activity_data=activity, generated_at=generated_at)
 
     # -- Module H -----------------------------------------------------------
+    # H2/H3 (history + acknowledge): session-scoped registry. The engine
+    # detects anomalies on demand; this registry stores the most recent
+    # detection per (facility, period) so H2 can serve history and H3 can
+    # ACK/confirm before any downstream consumer may act on an anomaly.
+    # NOTE (H3 trace): nothing in the current codebase auto-adjusts or
+    # flags anomalies downstream; the acknowledge gate therefore protects
+    # future consumers. Persistence is Phase-4 backlog (owner P3).
+    _anomaly_registry: dict[tuple[str, str], tuple[AnomalyResult, datetime]] = {}
+    _anomaly_ack: dict[str, dict] = {}  # anomaly_id -> {note, acknowledged_at}
+
     def anomalies(
         self,
         facility_id: str,
@@ -166,18 +181,75 @@ class EcoLeakEngine:
         *,
         history_inventories: list[CarbonInventory] | None = None,
         generated_at: datetime | None = None,
+        store: bool = True,
     ) -> AnomalyResult:
         if history_inventories is None:
             history_inventories = [self.calculate_inventory(facility_id, reporting_period_id, generated_at=generated_at)]
         features: list[PeriodFeatures] = []
         for inv in history_inventories:
             features.extend(self.anomaly.features_from_inventory(inv))
-        return self.anomaly.detect(
+        result = self.anomaly.detect(
             facility_id=facility_id,
             reporting_period_id=reporting_period_id,
             history=features,
             generated_at=generated_at,
         )
+        if store:
+            now = result.generated_at
+            self._anomaly_registry[(facility_id, reporting_period_id)] = (result, now)
+        return result
+
+    def list_anomalies(self, facility_id: str, reporting_period_id: str) -> dict:
+        """H2: latest stored detection for a facility/period, ACK state merged."""
+        entry = self._anomaly_registry.get((facility_id, reporting_period_id))
+        if entry is None:
+            raise EntityNotFoundError(
+                "No anomaly detection stored for this facility/period; run detect first",
+                {"facility_id": facility_id, "reporting_period_id": reporting_period_id},
+            )
+        result, _ = entry
+        payload = result.to_dict()
+        merged: list[dict] = []
+        for a in payload.get("anomalies", []):
+            aid = str(a.get("id") or a.get("anomaly_id") or "/")
+            ack = self._anomaly_ack.get(aid)
+            row = dict(a)
+            row["acknowledged"] = bool(ack)
+            if ack:
+                row["acknowledged_note"] = ack.get("note")
+                row["acknowledged_at"] = ack.get("acknowledged_at")
+            merged.append(row)
+        return {**payload, "anomalies": merged}
+
+    def acknowledge_anomaly(self, anomaly_id: str, *, note: str | None = None) -> dict:
+        """H3: mark an anomaly acknowledged (=='confirmed/seen') before any
+        downstream consumer may act on it. Requires the anomaly to exist in
+        the registry; tenant ownership is enforced by the route layer via the
+        facility resolution guard."""
+        for (facility_id, period_id), (result, _) in self._anomaly_registry.items():
+            for a in result.anomalies:
+                aid = str(a.get("id") or a.get("anomaly_id"))
+                if aid == anomaly_id:
+                    from datetime import datetime as _dt, timezone as _tz
+                    self._anomaly_ack[anomaly_id] = {
+                        "note": note,
+                        "acknowledged_at": _dt.now(_tz.utc).isoformat(),
+                        "facility_id": facility_id,
+                        "reporting_period_id": period_id,
+                    }
+                    return self._anomaly_ack[anomaly_id]
+        raise EntityNotFoundError("Unknown anomaly id", {"anomaly_id": anomaly_id})
+
+    def resolve_anomaly_facility(self, anomaly_id: str) -> str:
+        """Tenant-resolution step for H3: return the owning facility WITHOUT
+        writing any state (so a cross-tenant PATCH cannot mutate as a side
+        effect of failing auth)."""
+        for (facility_id, _period_id), (result, _) in self._anomaly_registry.items():
+            for a in result.anomalies:
+                aid = str(a.get("id") or a.get("anomaly_id"))
+                if aid == anomaly_id:
+                    return facility_id
+        raise EntityNotFoundError("Unknown anomaly id", {"anomaly_id": anomaly_id})
 
 
 def build_engine(

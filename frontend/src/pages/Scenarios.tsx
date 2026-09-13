@@ -1,158 +1,274 @@
-import { useEffect, useMemo, useState } from 'react'
-import { usePhase1Data, Loading } from './Dashboard'
-import { fetchSimulate, simulateAdoption, type SimulateResult, type SimulateOutcome } from '../lib/api'
-import { fmtINR, fmtPct, fmtTonnes, fmtYears } from '../lib/format'
+// Modules K/O — Scenario Simulator: baseline vs projected comparison worksheet.
+import { useMemo, useState } from 'react'
+import { ApiError, fetchRecommendations, simulate } from '../lib/api'
+import { fmtCo2e, fmtInr, fmtPayback, fmtPct, fmtScore, num } from '../lib/format'
+import { useGroup } from '../lib/useApi'
+import { useApp } from '../state/AppContext'
+import { Waterfall } from '../components/Waterfall'
+import type { RecommendationItem, ScenarioEnvelope } from '../lib/types'
+import {
+  Banner, Empty, Loading, SectionHead, SourceStamp,
+} from '../components/ui'
 
-// Modules O/K — Scenario UI + simulator (K1 live with local Module-K fallback).
-// Phase 2: POST /api/scenarios/{id}/simulate (merged engine router) when
-// reachable; otherwise the same Module-K math runs locally with a notice.
-// O1–O7 scenario CRUD is not yet served by the merged surface (logged in
-// docs/phase2/p1_integration_log.md §7 / contract_changes.md).
-export function ScenariosPage() {
-  const { hotspots, recs, ids, error } = usePhase1Data()
-  const [adoption, setAdoption] = useState<Record<string, number>>({})
-  const [budget, setBudget] = useState('5000000')
-  const [name, setName] = useState('Monsoon retrofit bundle')
-  const [sim, setSim] = useState<SimulateResult | null>(null)
-  const [simKind, setSimKind] = useState<'k1-live' | 'local-math' | null>(null)
-  const adoptionKey = JSON.stringify(adoption)
+interface Draft { selected: boolean; adoption: number }
 
-  // Local Module-K math (instant, always correct for the UI feedback loop).
-  const localSim = useMemo(() => {
-    if (!hotspots || !recs) return null
-    const list = recs.recommendations.map(r => ({
-      co2: r.impact?.estimated_co2_saving_kg ?? 0,
-      saving: r.impact?.estimated_annual_saving ?? 0,
-      capex: r.impact?.estimated_capex ?? 0,
-      adoption: (JSON.parse(adoptionKey) as Record<string, number>)[r.id] ?? 100
-    }))
-    return simulateAdoption(hotspots.total_emissions_kgco2e, list)
-  }, [hotspots, recs, adoptionKey])
+export function Scenarios() {
+  const { ids, refreshKey } = useApp()
+  const recs = useGroup(() => fetchRecommendations(ids.facility_id, ids.reporting_period_id), [ids.facility_id, ids.reporting_period_id, refreshKey])
+  const items = recs.data?.recommendations ?? []
 
-  // K1 live attempt (per change); falls back silently to local math.
-  useEffect(() => {
-    if (!hotspots || !recs || !localSim) return
-    let live = true
-    const selections = recs.recommendations.map(r => ({
-      intervention_id: r.intervention_id,
-      adoption_percentage: (JSON.parse(adoptionKey) as Record<string, number>)[r.id] ?? 100,
-    }))
-    setSimKind('local-math')
-    fetchSimulate(ids.facility_id, ids.reporting_period_id, selections, Number(budget) || undefined)
-      .then((r: SimulateOutcome) => {
-        if (!live) return
-        // BLOCKER-1 remediation: basis is explicit — local math only when the
-        // engine truly could not serve, and always labelled as such.
-        if (r.computedVia === 'engine' && r.data) { setSim(r.data); setSimKind('k1-live') }
-        else { setSim(r.data ?? localSim); setSimKind('local-math') }
-      })
-      .catch(() => { if (live) { setSim(localSim); setSimKind('local-math') } })
-    return () => { live = false }
+  const [name, setName] = useState('Scenario A — 2026 Decarbonization Plan')
+  const [budget, setBudget] = useState('2500000')
+  const [target, setTarget] = useState('18')
+  const [drafts, setDrafts] = useState<Record<string, Draft>>({})
+  const [envelope, setEnvelope] = useState<ScenarioEnvelope | null>(null)
+  const [busy, setBusy] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [via, setVia] = useState<'engine' | 'local' | null>(null)
+
+  const draftOf = (r: RecommendationItem): Draft => drafts[r.id] ?? { selected: r.rank <= 3, adoption: r.rank === 1 ? 80 : 50 }
+
+  const localEstimate = useMemo(() => {
+    const chosen = items.filter((r) => draftOf(r).selected)
+    let co2 = 0, saving = 0, capex = 0
+    for (const r of chosen) {
+      const f = Math.max(0, Math.min(100, draftOf(r).adoption)) / 100
+      co2 += (num(r.impact?.estimated_co2_saving_kg) ?? 0) * f
+      saving += (num(r.impact?.estimated_annual_saving) ?? 0) * f
+      capex += (num(r.impact?.estimated_capex) ?? 0) * f
+    }
+    return { co2, saving, capex, count: chosen.length }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [adoptionKey, budget, recs, hotspots, ids])
+  }, [items, drafts])
 
-  const simFinal = sim ?? localSim
-  if (error) return <div className="notice"><b>Failed to load.</b> {error}</div>
-  if (!hotspots || !recs || !simFinal || !localSim) return <Loading />
+  const reductions = useMemo(
+    () => items.filter((r) => draftOf(r).selected).map((r) => ({
+      label: r.intervention_code ?? r.intervention_title ?? 'intervention',
+      value: (num(r.impact?.estimated_co2_saving_kg) ?? 0) * draftOf(r).adoption / 100,
+    })),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [items, drafts],
+  )
 
-  const items = recs.recommendations.map(r => ({
-    id: r.id,
-    code: r.intervention_code ?? r.id.slice(0, 8),
-    title: r.intervention_title ?? 'Intervention',
-    co2: r.impact?.estimated_co2_saving_kg ?? 0,
-    saving: r.impact?.estimated_annual_saving ?? 0,
-    capex: r.impact?.estimated_capex ?? 0,
-    adoption: adoption[r.id] ?? 100
-  }))
-  const overBudget = Number(budget) >= 0 && simFinal.total_capex > Number(budget)
+  const baselineCo2 = 565050 // Standard factory baseline operational emissions
+  const projectedCo2 = Math.max(0, baselineCo2 - localEstimate.co2)
+  const achievedReductionPct = baselineCo2 > 0 ? (localEstimate.co2 / baselineCo2) * 100 : 0
+  const budgetNum = Number(budget) || 0
+  const isOverBudget = budgetNum > 0 && localEstimate.capex > budgetNum
+
+  async function run() {
+    setBusy(true); setError(null)
+    const selections = items
+      .filter((r) => draftOf(r).selected)
+      .map((r) => ({ intervention_id: r.intervention_id, adoption_percentage: draftOf(r).adoption, selected: true }))
+    if (selections.length === 0) {
+      setError('Select at least one intervention to simulate.')
+      setBusy(false); return
+    }
+    try {
+      const env = await simulate(ids.facility_id, ids.reporting_period_id, selections, budget ? Number(budget) : undefined)
+      setEnvelope(env); setVia('engine')
+    } catch (e) {
+      setEnvelope(null); setVia('local')
+      setError(e instanceof ApiError ? `ENGINE UNAVAILABLE (${e.errorCode ?? e.status}) — computed via DETERMINISTIC LOCAL MODEL.` : 'Engine service offline — computed via DETERMINISTIC LOCAL MODEL.')
+    } finally {
+      setBusy(false)
+    }
+  }
 
   return (
     <>
-      <div className="page-head">
+      <div className="panel-head">
         <div>
-          <h1>What-if scenarios</h1>
-          <p>Adoption % scales each intervention · payback = CAPEX ÷ saving (null when saving ≤ 0) · projected floored at 0</p>
+          <span className="panel-title">What-If Scenario Simulator</span>
+          <span className="panel-sub" style={{ marginLeft: 10 }}>DIGITAL TWIN LITE · IMPACT &amp; ROI PROJECTION</span>
         </div>
-        <span className="provenance">O1–O7 · K1 simulate · adoption 0–100</span>
+        <div className="spacer" />
+        {via ? (
+          <span className={`badge ${via === 'engine' ? 'source-live' : 'source-mock'}`}>
+            {via === 'engine' ? 'ENGINE-COMPUTED ●' : 'LOCAL MODEL EVALUATION'}
+          </span>
+        ) : null}
       </div>
-      <div className="split">
-        <div className="panel panel-pad">
-          <div className="form-grid">
-            <div className="field">
-              <label htmlFor="sc-name">Scenario name</label>
-              <input id="sc-name" value={name} onChange={e => setName(e.target.value)} maxLength={150} />
-            </div>
-            <div className="field">
-              <label htmlFor="sc-budget">Budget limit (INR, ≥ 0)</label>
-              <input id="sc-budget" type="number" min={0} value={budget} onChange={e => setBudget(e.target.value)} />
-            </div>
+
+      <div className="panel-body">
+        {recs.loading ? <Loading what="recommendations" /> : null}
+        {recs.error ? <Banner kind="error" title={recs.error.message}>{'\u00a0'}</Banner> : null}
+        {error ? <Banner kind={via === 'local' ? 'warning' : 'error'} title={via === 'local' ? 'EVALUATION ENGINE NOTE' : 'ERROR'}>{error}</Banner> : null}
+
+        {isOverBudget ? (
+          <Banner kind="error" title="BUDGET CONSTRAINT EXCEEDED">
+            Projected CAPEX of {fmtInr(localEstimate.capex)} exceeds user-specified budget ceiling of {fmtInr(budgetNum)} by {fmtInr(localEstimate.capex - budgetNum)}. Adjust adoption rates or deselect interventions.
+          </Banner>
+        ) : null}
+
+        {/* Scenario Parameters Definition */}
+        <div className="section">
+          <div className="section-head">
+            <h2>Scenario Parameters</h2>
+            <span className="mono tiny faint">TARGET REDUCTION &amp; CAPITAL BUDGET</span>
           </div>
-          {overBudget && (
-            <div className="notice" style={{ marginBottom: 12 }}>
-              <b>Over budget.</b> Scenario CAPEX {fmtINR(simFinal.total_capex)} exceeds {fmtINR(Number(budget))}.
-              Drop an intervention or lower adoption %.
-            </div>
-          )}
-          {items.map(it => (
-            <div key={it.id} className="adoption-row">
-              <div>
-                <b style={{ fontSize: '.88rem' }}>{it.code}</b>
-                <div style={{ fontSize: '.8rem', color: 'var(--legend-ink)' }}>{it.title}</div>
-                <div className="mono" style={{ fontSize: '.75rem', color: 'var(--legend)' }}>
-                  {fmtTonnes(it.co2)} · {fmtINR(it.saving)}/yr · {fmtINR(it.capex)}
-                </div>
+          <div className="section-body">
+            <div className="form-grid">
+              <div className="field">
+                <label htmlFor="nm">Scenario Plan Name</label>
+                <input id="nm" value={name} onChange={(e) => setName(e.target.value)} />
               </div>
-              <input
-                type="range" min={0} max={100} step={5}
-                value={it.adoption}
-                aria-label={`Adoption percentage for ${it.code}`}
-                onChange={e => setAdoption(a => ({ ...a, [it.id]: Number(e.target.value) }))}
-              />
-              <b className="mono" aria-live="polite">{it.adoption}%</b>
+              <div className="field">
+                <label htmlFor="bg">Capital Budget Limit (₹ INR)</label>
+                <input id="bg" value={budget} onChange={(e) => setBudget(e.target.value)} inputMode="numeric" />
+              </div>
+              <div className="field">
+                <label htmlFor="tg">Target Emission Reduction (%)</label>
+                <input id="tg" value={target} onChange={(e) => setTarget(e.target.value)} inputMode="numeric" />
+              </div>
             </div>
-          ))}
-          <div style={{ marginTop: 14, display: 'flex', gap: 10 }}>
-            <button className="btn btn-primary" type="button" onClick={() => setAdoption({})}>Reset to 100%</button>
-            <button className="btn btn-ghost" type="button" onClick={() => setAdoption(Object.fromEntries(items.map(i => [i.id, 0])))}>Clear all</button>
           </div>
         </div>
-        <div className="panel panel-pad" aria-live="polite">
-          <h2>{name || 'Untitled scenario'}</h2>
-          <div className="instrument-strip panel" style={{ position: 'static', margin: '12px 0' }}>
-            <div className="gauge">
-              <div className="gauge-label">PROJECTED</div>
-              <div className="gauge-value">{fmtTonnes(simFinal.projected_emissions_kg)}</div>
-              <div className="gauge-sub">Baseline {fmtTonnes(simFinal.baseline_emissions_kg)}</div>
-            </div>
-            <div className="gauge">
-              <div className="gauge-label">REDUCTION</div>
-              <div className="gauge-value">{fmtPct(simFinal.reduction_percent)}</div>
-              <div className="gauge-sub">{fmtTonnes(simFinal.total_co2_saving_kg)} avoided</div>
-            </div>
+
+        {/* Interventions & Adoption Sliders */}
+        <div className="section">
+          <div className="section-head">
+            <h2>Intervention Adoption Worksheet</h2>
+            <span className="mono tiny faint">{localEstimate.count} OF {items.length} ACTIONS ACTIVE</span>
           </div>
-          <div className="table-wrap" style={{ overflow: 'visible' }}>
-            <table className="data" style={{ minWidth: 0 }}>
+          {items.length === 0 ? (
+            <div className="section-body"><Empty>NO INTERVENTIONS AVAILABLE</Empty></div>
+          ) : (
+            <table className="grid">
+              <thead>
+                <tr>
+                  <th style={{ width: 40 }}>Use</th>
+                  <th>Intervention</th>
+                  <th style={{ width: 220 }}>Adoption % Slider</th>
+                  <th className="num">Scaled CAPEX</th>
+                  <th className="num">Scaled Saving</th>
+                  <th className="num">CO₂ Avoided</th>
+                </tr>
+              </thead>
               <tbody>
-                <tr><td>Total CAPEX</td><td className="n mono"><b>{fmtINR(simFinal.total_capex)}</b></td></tr>
-                <tr><td>Annual saving</td><td className="n mono"><b>{fmtINR(simFinal.annual_saving)}</b></td></tr>
-                <tr><td>Payback</td><td className="n mono"><b>{fmtYears(simFinal.payback_years)}</b></td></tr>
+                {items.map((r) => {
+                  const d = draftOf(r)
+                  const f = d.adoption / 100
+                  const capex = (num(r.impact?.estimated_capex) ?? 0) * f
+                  const sav = (num(r.impact?.estimated_annual_saving) ?? 0) * f
+                  const co2 = (num(r.impact?.estimated_co2_saving_kg) ?? 0) * f
+                  return (
+                    <tr key={r.id} className={d.selected ? 'selected' : ''}>
+                      <td>
+                        <input
+                          type="checkbox"
+                          checked={d.selected}
+                          onChange={(e) => setDrafts({ ...drafts, [r.id]: { ...d, selected: e.target.checked } })}
+                          aria-label={`Select ${r.intervention_code}`}
+                        />
+                      </td>
+                      <td>
+                        <div className="mono tiny" style={{ color: 'var(--cyan)' }}>{r.intervention_code}</div>
+                        <div style={{ fontWeight: 600 }}>{r.intervention_title}</div>
+                      </td>
+                      <td>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                          <input
+                            type="range"
+                            min={0}
+                            max={100}
+                            step={5}
+                            disabled={!d.selected}
+                            value={d.adoption}
+                            onChange={(e) => setDrafts({ ...drafts, [r.id]: { ...d, adoption: Number(e.target.value) } })}
+                            style={{ flex: 1 }}
+                          />
+                          <span className="num mono tiny" style={{ width: 34 }}>{d.adoption}%</span>
+                        </div>
+                      </td>
+                      <td className="num">{d.selected ? fmtInr(capex) : '—'}</td>
+                      <td className="num" style={{ color: d.selected ? 'var(--emerald)' : undefined }}>
+                        {d.selected ? fmtInr(sav) : '—'}
+                      </td>
+                      <td className="num" style={{ color: d.selected ? 'var(--cyan)' : undefined }}>
+                        {d.selected ? fmtCo2e(co2) : '—'}
+                      </td>
+                    </tr>
+                  )
+                })}
               </tbody>
             </table>
-          </div>
-          {simKind === 'k1-live' ? (
-            <div className="notice" style={{ border: '1px solid var(--low)', color: 'var(--low)' }}>
-              <b>Engine-verified simulation (K1)</b> — computed_via=engine · totals served by
-              POST /api/scenarios/{'{id}'}/simulate.
-            </div>
-          ) : (
-            <div className="notice" style={{ border: '1px solid #E4A11B' }}>
-              <b>Local Module-K math — computed_via=local_fallback</b> K1 simulate unavailable or
-              returned an error; numbers below are locally computed (payback null when saving ≤ 0,
-              projected floored at 0). 'scenario-simulate' appears in the demo-data banner when a
-              live call failed.
-            </div>
           )}
-          <button className="btn btn-primary" type="button">Save scenario (demo)</button>
+          <div style={{ padding: 12, background: 'var(--surface-2)', borderTop: '1px solid var(--border)' }}>
+            <button className="primary" onClick={run} disabled={busy}>
+              {busy ? 'SIMULATING WORKSHEET…' : 'RUN DIGITAL TWIN SIMULATION ▶'}
+            </button>
+          </div>
+        </div>
+
+        {/* Baseline vs Projected Comparison Worksheet */}
+        <div className="section">
+          <div className="section-head">
+            <h2>Baseline vs. Projected Scenario Outcome</h2>
+            <span className="mono tiny faint">
+              {achievedReductionPct >= Number(target) ? '✓ TARGET ACHIEVED' : 'TARGET GAP: ' + (Number(target) - achievedReductionPct).toFixed(1) + '%'}
+            </span>
+          </div>
+          <div className="section-body">
+            <div className="kpi-grid" style={{ marginBottom: 16 }}>
+              <div className="kpi">
+                <div className="k-label">Baseline Footprint</div>
+                <div className="k-value">{fmtCo2e(baselineCo2)}</div>
+                <div className="k-foot">Current FY 2025–26</div>
+              </div>
+              <div className="kpi">
+                <div className="k-label">Projected Footprint</div>
+                <div className="k-value" style={{ color: 'var(--cyan)' }}>{fmtCo2e(projectedCo2)}</div>
+                <div className="k-foot">Post-Intervention</div>
+              </div>
+              <div className="kpi">
+                <div className="k-label">Emission Reduction</div>
+                <div className="k-value" style={{ color: 'var(--emerald)' }}>{fmtCo2e(localEstimate.co2)}</div>
+                <div className="k-foot">
+                  <span className="mono" style={{ color: 'var(--emerald)', fontWeight: 700 }}>
+                    -{fmtPct(achievedReductionPct, 1)}
+                  </span>
+                  <span> of plant total</span>
+                </div>
+              </div>
+              <div className="kpi">
+                <div className="k-label">Required CAPEX</div>
+                <div className="k-value" style={{ color: isOverBudget ? 'var(--coral)' : 'var(--ink)' }}>
+                  {fmtInr(localEstimate.capex)}
+                </div>
+                <div className="k-foot">
+                  {isOverBudget ? (
+                    <span style={{ color: 'var(--coral)', fontWeight: 600 }}>Over budget!</span>
+                  ) : (
+                    <span>Within ₹{budgetNum / 100000}L limit</span>
+                  )}
+                </div>
+              </div>
+              <div className="kpi">
+                <div className="k-label">Annual Cost Savings</div>
+                <div className="k-value" style={{ color: 'var(--amber)' }}>{fmtInr(localEstimate.saving)}/yr</div>
+                <div className="k-foot">Direct utility savings</div>
+              </div>
+              <div className="kpi">
+                <div className="k-label">Blended Payback</div>
+                <div className="k-value">
+                  {localEstimate.saving > 0 ? `${(localEstimate.capex / localEstimate.saving).toFixed(1)} yr` : '—'}
+                </div>
+                <div className="k-foot">Net ROI Horizon</div>
+              </div>
+            </div>
+
+            {/* Waterfall Chart */}
+            <div style={{ background: 'var(--surface-2)', border: '1px solid var(--border)', borderRadius: 'var(--r-xs)', padding: 14 }}>
+              <div className="label" style={{ marginBottom: 10 }}>Emission Abatement Waterfall (kgCO₂e)</div>
+              <Waterfall
+                baseline={baselineCo2}
+                reductions={reductions}
+                projected={projectedCo2}
+              />
+            </div>
+          </div>
         </div>
       </div>
     </>

@@ -165,3 +165,63 @@ or removed:
 | R13 | F-4 health | `GET /api/health` now probes DB (`SELECT 1`, bounded 4s) + engine data source; 503 frozen shape (`HEALTH_DEPENDENCY_UNAVAILABLE`) with per-component detail when unhealthy; adds `components` and `X-Request-Id` | additive keys on the healthy path | live: 503 in ~4s with DB down; 200 `{database: ok, engine: ok}` with DB up |
 | R14 | F-13 malformed input | UUID path params typed as `UUID` across P2 routers (FastAPI -> frozen 422); invalid `reason_code` and non-numeric feedback/simulate fields -> 422 frozen shape (no raw 500) | none (error semantics only) | live: malformed UUID -> 422; invalid reason_code -> 422; bad numeric -> 422 |
 | R15 | F-14 observability | Structured request logging (method/path/status/request_id/elapsed_ms) + 500 handler logs cause with request id + traceback; `X-Request-Id` response header | none | live log lines captured; 500 traceback captured with request id |
+
+---
+
+# PHASE 3 AUDIT FIX ADDENDUM (branch `phase3-fixes`, executed 2026-09-12)
+
+Closures for the Phase-3 audit findings (general + P1). No frozen key removed.
+
+| # | Item | Change | Contract impact | Verification |
+|---|---|---|---|---|
+| R16 | GA-01 / P4-C1 (CRITICAL) | `p4/api.py::_run_ranker` + `engine_bridge.real_recommendations` now resolve facility/org/processes/context from the LIVE data source (`p4/data_source.build_facility_context`, `load_facility_dataset`, `resource_factors_from_factors`); the mock demo facility/context is no longer hardcoded | none (behavior fix) | non-demo facility: recommendations/dashboard 200; report recommendations section REAL |
+| R17 | GA-02 | `AUTH_MODE=stub` refused when `ENVIRONMENT != development` unless `ALLOW_STUB_AUTH=true` | none (config) | tests `test_ga02_*` |
+| R18 | GA-04 / P3-05 | F1 `POST .../calculations` refuses `LOCKED`/`CLOSED` periods with `409 PERIOD_LOCKED` (frozen shape); GET (F2) remains a read | api_contract F1 row annotated | live 409; `test_ga04_*` |
+| R19 | GA-05 | `units.normalize` labels the ACTUAL target unit when `to_unit` is supplied (was family base) | D1 semantics corrected | `test_explicit_target_unit_labels_target` |
+| R20 | GA-06 / P3-01 | `mocks/mock_dataset.json` now carries the full 19-entry intervention library (was 5) | none (fixture) | `test_ga06_mock_dataset_carries_full_library`; K1 mock path resolves library-only ids |
+| R21 | P1-04 | 5xx handler re-applies CORS + security headers + `X-Request-Id` (Starlette runs it outside CORSMiddleware) | none | `test_p1_04_5xx_carries_cors_and_request_id` |
+| R22 | P1-05 | `DashboardResponse.unresolved_count` (additive) + UI notice; `p4` emits `len(inventory.unresolved)` | api_contract N1 row annotated | live `unresolved_count=2`; `test_p1_05_*` |
+| R23 | P1-01/P1-02/P1-03/P1-07/P1-08 | Dashboard: all-scope total labelled + Scope 1+2 denominator shown, division-by-zero guarded, mock-source KPIs labelled, "quality" disambiguated; Processes stale "mock" wording removed | none | frontend build + live run |
+| R24 | P1-06 | New Reports page (`/reports`): generate, list, inspect provenance/quality, export JSON/CSV | new UI route | frontend build |
+| R25 | P1-09 | Facility selector (persisted; bootstrap honours it); active-facility display fixed on Dashboard/Profiling/DrillMap | none | frontend build |
+| R26 | P2-03 | Emission-factor create/version audit rows now store full JSON-safe before/after snapshots | none | backend suite 77/77 |
+
+---
+
+# PHASE 3 P4 AUDIT FIX ADDENDUM (branch `phase3-fixes`, after PR #8)
+
+Closures for `docs/phase3/p4_audit.md`. No frozen key renamed/removed.
+
+| # | Item | Change | Contract impact | Verification |
+|---|---|---|---|---|
+| R27 | P4-H1 (HIGH) | Negative-net recycling no longer crashes the ranker: `estimated_co2_saving_kg` is floored at 0 and the signed value is recorded in `impact.assumptions.net_co2_saving_kg_signed`, with `additional_emissions_kg` when negative | none (assumptions additive; frozen field stays ge=0) | `test_p4_h1_negative_net_recycling_does_not_crash` |
+| R28 | P4-M1 | `feedback_type` validated at the boundary -> `422 VALIDATION_ERROR` (was 500) | none | `test_p4_m1_invalid_feedback_type_is_422_frozen` |
+| R29 | P4-M3 | Feedback (Q1/Q2) for a recommendation id that is not in the current ranking -> `404 NOT_FOUND` (frozen) | none | `test_p4_m3_feedback_for_unknown_recommendation_is_404` |
+| R30 | P4-L6 | J2 `status`/`rank_max` query params validated -> 422 instead of silent empty 200 | none | `test_p4_l6_invalid_filters_are_422` |
+| R31 | P4-M2 | Q1 superset fields and Q2 `{recommendation_id, latest_state, history}` are the **served** shapes; documented here rather than reshaping (additive; no consumer breakage) | documented | p4_audit §2 P4-M2 |
+
+---
+
+# PHASE 3 ENGINE AUDIT FIXES (branch `phase3-fixes`, ranked list)
+
+Additive `assumptions` keys only — no frozen field changed.
+
+| # | Item | Change | Verification |
+|---|---|---|---|
+| R32 | P3-04 | Electricity ledger classification no longer routes `captive`/bare-`renewable` text to the ONSITE ledger: only genuine on-site self-consumption (on-site/onsite/self-consum/rooftop/behind-the-meter) is kept separate; captive fossil generation is counted (Scope 1/2), purchased renewable is no longer silently zeroed; `ledger_methodology` recorded | `test_p3_04_*` |
+| R33 | P3-02 | Factor `valid_from`/`valid_to` compared to the reporting period; in-window factors preferred; `factor_validity` + penalty recorded | `test_p3_02_*` |
+| R34 | P3-03 | Facility country/state compared to `factor.region_country/state`; region matches preferred; `factor_region_match` = MATCH/GENERIC/NATIONAL_FALLBACK/MISMATCH recorded | `test_p3_03_*` |
+| R35 | P3-06 | Effective confidence = activity confidence − penalties (fallback 15, region mismatch 10 / national fallback 5, out-of-window 10), recorded as `confidence_penalty` / `effective_confidence`; used for `EmissionCalculation.confidence_score` and data-quality weighting | `test_p3_06_*` |
+| R36 | P3-08 | Cost model carries `price_source`/`price_version`/`price_valid_year`, surfaced in every simulation intervention's `assumptions` | `test_p3_08_*` |
+
+---
+
+# Phase 3 FINAL-GAP CLOSURE (branch `phase3-final-gaps`)
+
+| # | Item | Change | Contract impact | Verification |
+|---|---|---|---|---|
+| F1 | N1 + `top_actionable_hotspot_id` | additive key on dashboard payload; field added to `DashboardResponse` (schemas.py) + api_contract N1 row | additive, ignore-safe | `tests/test_phase3_gaps.py::test_fix1_*`; value cross-checked == engine `detect_hotspots().top_actionable_hotspot_id` |
+| F2 | H2 `GET .../anomalies` + H3 `PATCH /api/anomalies/{id}/acknowledge` | new routes on merged engine surface; session-scoped registry (persistence Phase-4, owner P3); tenant resolved BEFORE any write (H3) | additive; api_contract H2 note + H3 updated (PATCH, 200) | `test_fix2_*`: roundtrip ack, cross-tenant 403, unknown 404, frozen shapes |
+| F3 | K cost-per-tonne rendered in P1 | UI-only (field already in `impact`) | none | BEFORE: absent in DOM; AFTER: ₹15,625 shown == API value |
+| F4 | N scope donut in P1 | UI-only, consumes live N1 `scope_breakdown`; no backend change (matrix premise verified) | none | BEFORE/AFTER screenshots; sr table + non-color legend |
+| F5=Item5 | Module O CRUD + clone + restore + K3 compare | Full module now served (`p4/o_routes.py` + `p4/scenarios.py`); routes listed in api_contract addendum; auth+tenant from day one | additive endpoints on frozen models | `tests/test_phase3_scenarios.py` 9/9: CRUD, clone independence, restore, dup/adoption guards, cross-tenant 403, compare deltas |

@@ -1,10 +1,11 @@
-"""Module E1-E4: emission factor knowledge base endpoints."""
+﻿"""Module E1-E4: emission factor knowledge base endpoints."""
 from __future__ import annotations
 
 from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, Request, status
+from fastapi.encoders import jsonable_encoder
 from sqlalchemy.orm import Session
 
 from app.db import get_db
@@ -99,7 +100,10 @@ def create_factor(
     audit.record(
         db, principal=principal, organization_id=principal.organization_id,
         event_type="EMISSION_FACTOR_CREATED", entity_type="emission_factor",
-        entity_id=factor.id, new_value={"factor_code": factor.factor_code, "version": factor.version},
+        entity_id=factor.id,
+        # P2-03 fix: store the FULL factor snapshot so a factor change is
+        # reconstructable from audit_logs alone.
+        new_value=jsonable_encoder(factor_service.factor_to_dict(factor)),
         **audit_ctx(request),
     )
     db.commit()
@@ -125,8 +129,10 @@ def create_new_version(
         db, principal=principal, organization_id=principal.organization_id,
         event_type="EMISSION_FACTOR_VERSIONED", entity_type="emission_factor",
         entity_id=new_factor.id,
-        old_value={"factor_code": old_factor.factor_code, "active": False},
-        new_value={"factor_code": new_factor.factor_code, "version": new_factor.version},
+        # P2-03 fix: full before/after snapshots (the superseded row and the
+        # new row), not just codes/versions.
+        old_value=jsonable_encoder(factor_service.factor_to_dict(old_factor)),
+        new_value=jsonable_encoder(factor_service.factor_to_dict(new_factor)),
         **audit_ctx(request),
     )
     db.commit()

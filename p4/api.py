@@ -20,6 +20,7 @@ from fastapi import APIRouter, Body, Depends, Query
 
 from contracts.schemas import (
     Facility,
+    FeedbackType,
     HotspotDetectionResult,
     Organization,
     Process,
@@ -28,11 +29,15 @@ from contracts.schemas import (
 )
 from engine.api import get_engine
 from engine.serialization import to_jsonable
-from p4.demo.run_demo import _load_json, _resource_factors
+from p4.data_source import (
+    build_facility_context,
+    load_facility_dataset,
+    resource_factors_from_factors,
+)
 from p4.engine import RecommendationConstraints, generate_with_diagnostics
 from p4.explainability import TemplateExplainer
 from p4.feedback import FeedbackError, InMemoryFeedbackStore
-from p4.models import FacilityContext, RejectionReasonCode
+from p4.models import RejectionReasonCode
 from p4.serialization import to_api_dict
 
 # Backend auth/guards live in backend/app; make them importable for BOTH the
@@ -55,30 +60,6 @@ router = APIRouter(tags=["recommendations"])
 _feedback_store = InMemoryFeedbackStore()
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
-MOCKS_DIR = REPO_ROOT / "mocks"
-DEMO_CONTEXT = Path(__file__).resolve().parent / "demo" / "demo_context.json"
-
-_DATASET_CACHE: dict[str, Any] | None = None
-
-
-def _dataset() -> dict[str, Any]:
-    global _DATASET_CACHE
-    if _DATASET_CACHE is None:
-        _DATASET_CACHE = _load_json(MOCKS_DIR / "mock_dataset.json")
-    return _DATASET_CACHE
-
-
-def _context() -> FacilityContext:
-    return FacilityContext.model_validate(_load_json(DEMO_CONTEXT))
-
-
-def _facility_and_org() -> tuple[Organization, Facility, list[Process]]:
-    ds = _dataset()
-    return (
-        Organization.model_validate(ds["organization"]),
-        Facility.model_validate(ds["facilities"][0]),
-        [Process.model_validate(item) for item in ds["processes"]],
-    )
 
 
 def _require_decimal(value: Any, field: str) -> Optional[Decimal]:
@@ -99,17 +80,26 @@ def _run_ranker(
     reporting_period_id: str,
     constraints: Optional[RecommendationConstraints],
 ) -> RecommendationGenerationResult:
-    """Hotspots (live P3 engine) -> P4 ranker -> frozen J2 envelope."""
+    """Hotspots (live P3 engine) -> P4 ranker -> frozen J2 envelope.
+
+    GA-01 / P4-C1 fix: facility, organization, processes and resource baselines
+    are resolved from the LIVE data source for the requested facility (the mock
+    demo facility/context was previously hardcoded here, so every non-demo
+    facility raised the engine's facility-match guard and returned 500).
+    """
     engine = get_engine()
     hotspots = engine.hotspot_result(facility_id, reporting_period_id)
-    organization, facility, processes = _facility_and_org()
-    factors = _resource_factors(_dataset())
+    organization, facility, processes = load_facility_dataset(engine, facility_id)
+    factors = resource_factors_from_factors(
+        engine.data_source.get_emission_factors(), facility.country
+    )
+    context = build_facility_context(engine, facility_id, reporting_period_id)
     run = generate_with_diagnostics(
         hotspots,
         facility,
         organization=organization,
         processes=processes,
-        context=_context(),
+        context=context,
         emission_factors=factors,
         constraints=constraints,
         explainer=TemplateExplainer(),
@@ -120,7 +110,8 @@ def _run_ranker(
 def _dashboard_payload(facility_id: str, reporting_period_id: str) -> dict:
     engine = get_engine()
     inventory = engine.calculate_inventory(facility_id, reporting_period_id)
-    hotspots: HotspotDetectionResult = engine.hotspot_result(facility_id, reporting_period_id)
+    analysis = engine.detect_hotspots(facility_id, reporting_period_id)
+    hotspots: HotspotDetectionResult = analysis.result
     ranking = _run_ranker(facility_id, reporting_period_id, None)
     potential_reduction = Decimal("0")
     potential_saving = Decimal("0")
@@ -141,11 +132,15 @@ def _dashboard_payload(facility_id: str, reporting_period_id: str) -> dict:
         "largest_hotspot": (
             to_jsonable(hotspots.hotspots[0]) if hotspots.hotspots else None
         ),
+        "top_actionable_hotspot_id": analysis.top_actionable_hotspot_id,
         "circularity_score": circularity.total_score,
         "potential_reduction_kgco2e": potential_reduction,
         "potential_annual_saving": potential_saving,
         "last_calculated_at": inventory.generated_at.isoformat(),
         "empty_state": len(hotspots.hotspots) == 0,
+        # P1-05: expose unresolved activity count so the UI can show that the
+        # totals exclude rows with no matching emission factor.
+        "unresolved_count": len(inventory.unresolved),
     }
     return to_jsonable(payload)
 
@@ -185,6 +180,16 @@ def get_recommendations(
     status: Optional[str] = Query(default=None),
     rank_max: Optional[int] = Query(default=None),
 ) -> dict:
+    # P4-L6: reject invalid filters instead of silently returning an empty 200.
+    if status is not None and status not in {s.value for s in RecommendationStatus}:
+        raise PlatformValidationError(
+            f"Invalid status {status!r}.",
+            details={"allowed": [s.value for s in RecommendationStatus]},
+        )
+    if rank_max is not None and rank_max < 1:
+        raise PlatformValidationError(
+            "rank_max must be >= 1.", details={"rank_max": rank_max}
+        )
     result = _run_ranker(facility_id, period_id, None)
     items = [
         _with_stored_status(rec)
@@ -333,6 +338,19 @@ def leak_map(facility_id: str, period_id: str) -> dict:
 # ---------------------------------------------------------------------------
 
 
+def _require_recommendation(recommendation_id: str) -> None:
+    """P4-M3: reject feedback for ids that are not part of the current ranking
+    (previously any UUID was accepted and stored)."""
+    engine = get_engine()
+    context = engine.default_context()
+    result = _run_ranker(context["facility_id"], context["reporting_period_id"], None)
+    if not any(str(rec.id) == recommendation_id for rec in result.recommendations):
+        raise NotFoundError(
+            "Recommendation not found.",
+            details={"recommendation_id": recommendation_id},
+        )
+
+
 @router.post(
     "/api/recommendations/{recommendation_id}/feedback",
     status_code=201,
@@ -342,11 +360,23 @@ def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> di
     """Q1: capture Useful / Not Applicable / Consider Later / Implemented /
     Rejected feedback with optional actual outcomess. REJECTED requires a
     structured reason_code (spam/rate-limit guarded at the platform layer)."""
-    feedback_type = body.get("feedback_type")
-    if not feedback_type:
+    raw_type = body.get("feedback_type")
+    if not raw_type:
         from engine.errors import MissingParameterError
 
         raise MissingParameterError("feedback_type is required", {"recommendation_id": recommendation_id})
+    # P4-M1: validate the enum at the boundary (was passed raw into the store
+    # and raised an uncaught pydantic ValidationError -> 500).
+    try:
+        feedback_type = FeedbackType(raw_type)
+    except ValueError:
+        raise PlatformValidationError(
+            f"Invalid feedback_type {raw_type!r}.",
+            details={
+                "recommendation_id": recommendation_id,
+                "allowed": [kind.value for kind in FeedbackType],
+            },
+        )
     reason_code = None
     if body.get("reason_code"):
         # F-13: invalid enum input is a 422 in the frozen shape, never a 500.
@@ -360,6 +390,7 @@ def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> di
                     "allowed": [code.value for code in RejectionReasonCode],
                 },
             )
+    _require_recommendation(recommendation_id)
     event: FeedbackEvent = _feedback_store.submit(
         recommendation_id=recommendation_id,
         feedback_type=feedback_type,
@@ -378,6 +409,7 @@ def submit_feedback(recommendation_id: str, body: dict = Body(default={})) -> di
 )
 def feedback_history(recommendation_id: str) -> dict:
     """Q2: latest state + full history for a recommendation."""
+    _require_recommendation(recommendation_id)
     events = _feedback_store.history(recommendation_id)
     latest = events[-1] if events else None
     return {

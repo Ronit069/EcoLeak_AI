@@ -16,10 +16,12 @@ from decimal import Decimal, InvalidOperation
 from pathlib import Path
 from typing import Any
 
+import os
+
 from fastapi import APIRouter, Body, Depends, FastAPI, Request
 from fastapi.responses import JSONResponse
 
-from contracts.schemas import Scope
+from contracts.schemas import ReportingPeriodStatus, Scope
 
 from .config import HotspotWeights
 from .data_source import default_data_source
@@ -27,6 +29,7 @@ from .errors import (
     CarbonPlatformError,
     EntityNotFoundError,
     MissingParameterError,
+    PeriodLockedError,
 )
 from .serialization import to_jsonable
 from .service import EcoLeakEngine
@@ -42,6 +45,7 @@ from app.errors import PlatformValidationError  # noqa: E402
 from app.guards import (  # noqa: E402  (merged-surface tenant guards, T0-3)
     context_tenant_guard,
     facility_tenant_guard,
+    get_current_principal, Principal,
     simulate_tenant_guard,
 )
 
@@ -83,6 +87,18 @@ def context() -> dict:
 
 
 @router.get(
+    "/api/engine/facilities/{facility_id}/reporting-periods",
+    dependencies=[Depends(facility_tenant_guard)],
+)
+def list_periods_for_facility(facility_id: str) -> list[dict]:
+    """P1-09: reporting periods for a facility (facility selector support).
+    Distinct path: A9 (P2 router) serves the same resource from PostgreSQL;
+    this engine-resolved variant works without a database, so the selector
+    can populate on any deployment (mock/SQLite/PG). Additive, ignore-safe."""
+    return _json(get_engine().data_source.list_reporting_periods(facility_id))
+
+
+@router.get(
     "/api/facilities/{facility_id}/reporting-periods/{period_id}/inventory-summary",
     dependencies=[Depends(facility_tenant_guard)],
 )
@@ -96,6 +112,19 @@ def inventory_summary(facility_id: str, period_id: str) -> dict:
     dependencies=[Depends(facility_tenant_guard)],
 )
 def calculations(facility_id: str, period_id: str, body: dict = Body(default={})) -> list[dict]:
+    # P3-05 / P2-06 fix: api_contract.md F1 — "period not LOCKED/CLOSED unless
+    # versioned". Recalculation on a locked period is refused with the frozen
+    # error shape (409 PERIOD_LOCKED); GET (F2) remains a read.
+    engine = get_engine()
+    period = engine.data_source.get_reporting_period(str(period_id))
+    if period is not None and period.status in {
+        ReportingPeriodStatus.LOCKED,
+        ReportingPeriodStatus.CLOSED,
+    }:
+        raise PeriodLockedError(
+            "Reporting period is locked; calculations require a versioned override.",
+            {"period_id": period_id, "status": period.status.value},
+        )
     return _calculations_payload(facility_id, period_id)
 
 
@@ -152,6 +181,25 @@ def circularity_score(facility_id: str, period_id: str) -> dict:
     return _json(get_engine().circularity_score(facility_id, period_id).to_dict())
 
 
+def _library_intervention(intervention_id: str):
+    """Resolve an intervention id against the frozen P4 library (GA-06).
+
+    ``K1_LIBRARY_FALLBACK=false`` disables the fallback so the K1 adversarial
+    red leg can still construct a genuinely non-resolving backend (the
+    library fix must not silently mask a broken resolver in tests/CI)."""
+    if os.environ.get("K1_LIBRARY_FALLBACK", "true").lower() == "false":
+        return None
+    from seed_interventions import load_library_contracts
+
+    try:
+        for entry in load_library_contracts():
+            if str(entry.id) == intervention_id or entry.intervention_code == intervention_id:
+                return entry
+    except Exception:
+        return None
+    return None
+
+
 @router.post(
     "/api/scenarios/{scenario_id}/simulate",
     dependencies=[Depends(simulate_tenant_guard)],
@@ -176,6 +224,13 @@ def simulate(scenario_id: str, body: dict = Body(default={})) -> dict:
             iv = interventions.get(str(item["intervention_id"]))
         if iv is None and item.get("intervention_code"):
             iv = interventions_by_code.get(item["intervention_code"])
+        if iv is None:
+            # GA-06 fix: the P4 intervention library (19 entries) is the
+            # canonical id space the J2 ranker emits, but the engine's data
+            # source may only know its own seeded subset (mock = 5). Resolve
+            # library-only ids from the shared frozen library so K1 works on
+            # the DEFAULT (mock) path too — never a silent 404 -> fallback.
+            iv = _library_intervention(str(item.get("intervention_id")) or "")
         if iv is None:
             raise EntityNotFoundError(
                 f"Unknown intervention: {item}",
@@ -236,6 +291,34 @@ def detect_anomalies(facility_id: str, body: dict = Body(default={})) -> dict:
         period_id = engine.default_context()["reporting_period_id"]
     result = engine.anomalies(facility_id, period_id)
     return _json(result.to_dict())
+
+
+@router.get(
+    "/api/facilities/{facility_id}/reporting-periods/{period_id}/anomalies",
+    dependencies=[Depends(facility_tenant_guard)],
+)
+def get_anomalies_history(facility_id: str, period_id: str) -> dict:
+    """H2: history endpoint — latest stored detection for facility/period,
+    with per-anomaly acknowledged state merged in (P3 final-gap closure)."""
+    return _json(get_engine().list_anomalies(facility_id, period_id))
+
+
+@router.patch("/api/anomalies/{anomaly_id}/acknowledge")
+def acknowledge_anomaly(
+    anomaly_id: str,
+    body: dict = Body(default={}),
+    principal: Principal = Depends(get_current_principal),
+) -> dict:
+    """H3: confirmation-before-correction gate. Tenant ownership is verified
+    BEFORE any state is written (anomaly -> facility -> organization)."""
+    from fastapi import Depends as _D, Body as _B  # noqa (already imported)
+
+    facility_id = get_engine().resolve_anomaly_facility(anomaly_id)
+    facility = get_engine().data_source.get_facility(facility_id)
+    if facility is None:
+        raise EntityNotFoundError("Unknown facility", {"facility_id": facility_id})
+    principal.assert_org(facility.organization_id)
+    return _json(get_engine().acknowledge_anomaly(anomaly_id, note=body.get("note")))
 
 
 def _json(value: Any) -> Any:

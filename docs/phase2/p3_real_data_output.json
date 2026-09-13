@@ -124,7 +124,7 @@
     ],
     "onsite_generation_kgco2e": 0,
     "exported_electricity_kgco2e": 0,
-    "data_quality_score": 89.33
+    "data_quality_score": 84.95
   },
   "G_hotspots": {
     "facility_id": "0a1b2c3d-0002-4002-8002-000000000002",
@@ -135,7 +135,7 @@
       "SCOPE_2"
     ],
     "total_emissions_kgco2e": 566360.8,
-    "data_quality_score": 89.33,
+    "data_quality_score": 84.95,
     "hotspots": [
       {
         "id": "67068b4d-ac4f-5052-b0b2-7a9d8062c9d6",
@@ -286,6 +286,9 @@
           "static_prices": true,
           "cost_model_note": "Static mock resource prices (Phase 1 fixture). Replace with P2 cost data; annual_saving is unavailable if a targeted activity has no price.",
           "currency": "INR",
+          "price_source": "EcoLeak P4/Module-K demo tariff fixture (static)",
+          "price_version": "p4-tariff-1.0",
+          "price_valid_year": 2026,
           "target_processes": [],
           "target_categories": [
             "ELECTRICITY",
@@ -323,6 +326,9 @@
           "static_prices": true,
           "cost_model_note": "Static mock resource prices (Phase 1 fixture). Replace with P2 cost data; annual_saving is unavailable if a targeted activity has no price.",
           "currency": "INR",
+          "price_source": "EcoLeak P4/Module-K demo tariff fixture (static)",
+          "price_version": "p4-tariff-1.0",
+          "price_valid_year": 2026,
           "target_processes": [
             "0a1b2c3d-0006-4006-8006-000000000006"
           ],

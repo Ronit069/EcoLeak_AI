@@ -27,7 +27,12 @@ def main() -> None:
     data = json.loads((Path(__file__).resolve().parents[1] / "mocks" / "mock_dataset.json").read_text(encoding="utf-8"))
     with engine.begin() as conn:
         conn.execute(tbl.delete())
+        # Only the original 5 mock interventions — this fixture must reproduce
+        # the pre-fix state even after mocks/mock_dataset.json was expanded to
+        # the full 19-entry library (GA-06).
         for iv in data["circular_interventions"]:
+            if iv.get("id") not in FIVE:
+                continue
             row = {k: (_uuid.UUID(v) if k == "id" else v) for k, v in iv.items()}
             conn.execute(tbl.insert(), [row])
         n = conn.execute(tbl.select()).scalars().all(); n = len(n)
